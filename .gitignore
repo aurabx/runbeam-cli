@@ -1,0 +1,22 @@
+# Build output
+/target/
+
+# Local packaging and temporary artifacts
+/tmp/
+*.log
+
+# macOS
+.DS_Store
+
+# IDE/editor
+.idea/
+.vscode/
+*.iml
+
+# Rust backup files
+**/*.rs.bk
+
+# Coverage and profiling
+coverage/
+*.profraw
+*.profdata

@@ -1,0 +1,24 @@
+[package]
+name = "runbeam-cli"
+version = "0.1.0"
+edition = "2024"
+
+# Ensure the binary produced is named `runbeam`
+[[bin]]
+name = "runbeam"
+path = "src/main.rs"
+
+[dependencies]
+# CLI argument parsing
+clap = { version = "4.5", features = ["derive"] }
+# Error handling
+anyhow = "1.0"
+# Structured logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = "z"
+panic = "abort"

@@ -1,0 +1,97 @@
+name: build-release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.os }} / ${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact_name: runbeam-linux-x86_64
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: runbeam-macos-aarch64
+            archive: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: runbeam-windows-x86_64
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install musl tools (Linux)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Package artifact
+        shell: bash
+        run: |
+          mkdir -p tmp
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            BIN_PATH="target/${{ matrix.target }}/release/runbeam.exe"
+            OUT="tmp/${{ matrix.artifact_name }}-v${{ steps.version.outputs.version }}.exe"
+            cp "$BIN_PATH" "$OUT"
+            7z a "tmp/${{ matrix.artifact_name }}-v${{ steps.version.outputs.version }}.zip" "$OUT"
+            certutil -hashfile "tmp/${{ matrix.artifact_name }}-v${{ steps.version.outputs.version }}.zip" SHA256 | sed -n '2p' > "tmp/${{ matrix.artifact_name }}-v${{ steps.version.outputs.version }}.zip.sha256"
+          else
+            BIN_PATH="target/${{ matrix.target }}/release/runbeam"
+            OUT="tmp/${{ matrix.artifact_name }}-v${{ steps.version.outputs.version }}"
+            cp "$BIN_PATH" "$OUT"
+            if [[ "${{ runner.os }}" == "macOS" ]]; then strip -x "$OUT" || true; else strip --strip-unneeded "$OUT" || true; fi
+            tar -C tmp -czf "tmp/${{ matrix.artifact_name }}-v${{ steps.version.outputs.version }}.tar.gz" "$(basename "$OUT")"
+            shasum -a 256 "tmp/${{ matrix.artifact_name }}-v${{ steps.version.outputs.version }}.tar.gz" > "tmp/${{ matrix.artifact_name }}-v${{ steps.version.outputs.version }}.tar.gz.sha256"
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}-v${{ steps.version.outputs.version }}
+          path: tmp/*${{ steps.version.outputs.version }}*
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**
+          fail_on_unmatched_files: true
