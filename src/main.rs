@@ -1,9 +1,11 @@
 mod cli;
+mod commands;
 
 use anyhow::Result;
 use clap::Parser;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 use tracing_subscriber::{fmt, EnvFilter};
+use commands::basic;
 
 fn init_tracing(verbosity: u8, quiet: bool) {
     // Base level: info, increase with -v; quiet forces warn
@@ -35,11 +37,10 @@ fn main() -> Result<()> {
 
     match args.command {
         Some(cli::Command::Echo { text }) => {
-            info!(%text, "echoing text");
-            println!("{}", text);
+            basic::echo(&text)?;
         }
         Some(cli::Command::Ping) => {
-            println!("pong");
+            basic::ping()?;
         }
         None => {
             // No subcommand: show help-like hint
