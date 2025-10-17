@@ -23,10 +23,8 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Print the provided text (example command)
-    Echo {
-        /// Text to print
-        text: String,
-    },
+    Echo { text: String, },
     /// Simple liveness check (example command)
     Ping,
+    HarmonyAdd { text:  String, },
 }

@@ -5,7 +5,7 @@ use anyhow::Result;
 use clap::Parser;
 use tracing::{debug, warn};
 use tracing_subscriber::{fmt, EnvFilter};
-use commands::basic;
+use commands::{basic, harmony};
 
 fn init_tracing(verbosity: u8, quiet: bool) {
     // Base level: info, increase with -v; quiet forces warn
@@ -41,6 +41,9 @@ fn main() -> Result<()> {
         }
         Some(cli::Command::Ping) => {
             basic::ping()?;
+        }
+        Some(cli::Command::HarmonyAdd { text}) => {
+            harmony::harmony::harmony_add(&text)?;
         }
         None => {
             // No subcommand: show help-like hint
