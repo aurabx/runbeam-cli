@@ -1,0 +1,88 @@
+# WARP.md
+
+This file provides guidance to WARP (warp.dev) when working with code in this repository.
+
+## Common Commands
+
+### Build and Run
+```sh
+cargo build                    # Debug build
+cargo build --release         # Release build (optimized)
+cargo run -- --help           # Show help
+cargo run -- ping             # Test with ping command
+cargo run -- echo "text"      # Test with echo command  
+cargo install --path .        # Install locally
+```
+
+### Lint and Format
+```sh
+cargo fmt                      # Format code
+cargo clippy -- -D warnings   # Lint with warnings as errors
+```
+
+### Tests
+```sh
+cargo test                     # Run all tests (none currently)
+cargo test <pattern>           # Run specific tests
+```
+Note: No tests exist yet. The `/samples` directory is intended for future test files.
+
+### Packaging
+```sh
+make build                     # Debug build
+make release                   # Release build
+make package-macos             # Package for macOS (current arch) → ./tmp/runbeam-macos-<arch>-v<version>.tar.gz
+make package-linux             # Package for Linux x86_64 musl → ./tmp/runbeam-linux-x86_64-v<version>.tar.gz
+make package-windows           # Package for Windows x86_64 → ./tmp/runbeam-windows-x86_64-v<version>.zip
+make clean-artifacts           # Remove ./tmp directory
+```
+
+All packaging outputs:
+- Binaries and archives in `./tmp/`
+- SHA-256 checksums generated alongside archives (`.sha256` files)
+- Linux cross-compilation requires musl toolchain or `cargo-zigbuild`
+
+### Logging and Verbosity
+```sh
+RUST_LOG=debug cargo run -- ping    # Set log level via environment
+cargo run -- -v ping                # Increase verbosity (-v, -vv, -vvv)
+cargo run -- -q ping                # Quiet mode (warnings only)
+```
+
+## High-Level Architecture
+
+### Entry Point and Flow
+- `main.rs`: Initializes structured logging (tracing-subscriber with EnvFilter), parses CLI via clap, dispatches to command handlers
+- Global flags: `-v`/`--verbose` (repeatable) and `-q`/`--quiet` control logging levels
+
+### Command Organization
+- Commands are organized under `src/commands/` as modules
+- Current structure:
+  - `src/commands/basic.rs`: Contains `echo` and `ping` commands
+  - `src/commands/harmony/`: Placeholder module for future harmony-related commands
+- Command dispatch happens in `main.rs` matching clap subcommands to handler functions
+
+### Adding New Commands
+1. Create module in `src/commands/` and declare in `src/commands/mod.rs`
+2. Add clap `Subcommand` variant in `src/cli.rs`
+3. Add dispatch logic in `main.rs` match statement
+
+### Conventions
+- Binary name: `runbeam` (configured in Cargo.toml `[[bin]]`)
+- Temporary files and packaging artifacts: `./tmp/` directory
+- Release build optimizations: LTO thin, panic=abort, opt-level="z"
+- Dependencies: clap (CLI), anyhow (errors), tracing + tracing-subscriber (logging)
+
+## CI/Release Process
+
+- Triggered on git tags matching `v*` pattern (e.g., `v0.1.0`)
+- Multi-platform builds: Linux (musl), macOS (aarch64), Windows (msvc)
+- Packages binaries into `./tmp/`, generates checksums, uploads to GitHub Release
+
+## Project Conventions
+
+- CLI built in Rust with binary named `runbeam`
+- Use `./tmp/` for temporary files and packaging artifacts (not system `/tmp`)
+- Schema validation directories are configurable (can point to `../jmix` or custom paths)
+- Encryption (when implemented): AES-256-GCM with ephemeral public key, IV and auth tag base64-encoded
+- A `/samples` directory is intended for test files when test suite is added
