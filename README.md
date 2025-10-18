@@ -1,91 +1,131 @@
-# runbeam
+# Runbeam CLI
 
-A Rust-based command-line interface (CLI) for the runbeam project.
+CLI for managing Runbeam and Harmony.
 
-## Features
-- Fast native binary with no runtime dependencies
-- Clap-based CLI with subcommands
-  - `ping` — simple liveness check (prints `pong`)
-  - `echo <text>` — prints the provided text
-- Verbosity controls: `-v/--verbose` (repeatable) and `-q/--quiet`
-- Structured logging via `tracing` (configure with `RUST_LOG` or `-v` flags)
+Homepage: https://harmonyproxy.com  
+Repository: https://github.com/aurabx/runbeam-cli
 
-## Getting Started
+## Installation
 
-### Prerequisites
-- Rust toolchain (stable). Install via https://rustup.rs
+Download a prebuilt binary from [GitHub Releases](https://github.com/aurabx/runbeam-cli/releases):
+- Visit the Releases page for this project
+- Choose the archive for your OS and architecture
+- Verify checksum and place the binary in your PATH
 
-### Build
+### macOS
 ```sh
-cargo build
+# Verify checksum
+shasum -a 256 runbeam-macos-aarch64-v0.2.0.tar.gz
+cat runbeam-macos-aarch64-v0.2.0.tar.gz.sha256
+
+# Extract and install
+tar -xzf runbeam-macos-aarch64-v0.2.0.tar.gz
+chmod +x runbeam
+mv runbeam /usr/local/bin
+# Or: mv runbeam ~/.local/bin and ensure ~/.local/bin is on PATH
 ```
 
-### Run
+### Linux
 ```sh
-# Show help
-cargo run -- --help
+# Verify checksum
+sha256sum runbeam-linux-x86_64-v0.2.0.tar.gz
+cat runbeam-linux-x86_64-v0.2.0.tar.gz.sha256
 
-# Subcommands
-cargo run -- ping
-cargo run -- echo "Hello from runbeam"
-
-# Verbose / quiet
-cargo run -- -v ping
-cargo run -- -q ping
-
-# Or with RUST_LOG
-RUST_LOG=debug cargo run -- ping
+# Extract and install
+tar -xzf runbeam-linux-x86_64-v0.2.0.tar.gz
+chmod +x runbeam
+sudo mv runbeam /usr/local/bin
+# Or: mv runbeam ~/.local/bin and ensure it is on PATH
 ```
 
-### Install locally
+### Windows
+```powershell
+# Verify checksum
+certutil -hashfile runbeam-windows-x86_64-v0.2.0.zip SHA256
+
+# Extract the ZIP using Explorer or PowerShell
+Expand-Archive .\runbeam-windows-x86_64-v0.2.0.zip -DestinationPath .
+# Move runbeam.exe to a folder on your PATH or add the folder to PATH
+```
+
+### Install from Crates.io
 ```sh
+cargo install runbeam-cli
+```
+
+### Install from Source
+```sh
+# Using a local checkout
 cargo install --path .
-runbeam ping
+
+# Or install directly from Git
+cargo install --git https://github.com/aurabx/runbeam-cli
 ```
 
-## Packaging and Artifacts
-We output all temporary artifacts into `./tmp`.
+## Quickstart
 
-### Release build (optimized)
 ```sh
-cargo build --release
-# macOS: optional strip to reduce size
-strip -x target/release/runbeam || true
+# List available commands
+runbeam list
+
+# Add a Harmony instance
+runbeam harmony:add -i 127.0.0.1 -p 8081 -x admin -l my-label
+
+# List registered instances
+runbeam harmony:list
+
+# Query instance info
+runbeam harmony:info -l my-label
+runbeam harmony:pipelines -l my-label
+runbeam harmony:routes -l my-label
 ```
 
-### Makefile targets
+## Data Directory
+
+The CLI stores its data in a user-specific file:
+- **macOS and Linux**: `~/.runbeam/harmony.json`
+- **Windows**: `%APPDATA%\runbeam\harmony.json`
+
+You can remove entries using the CLI:
 ```sh
-make build            # Debug build
-make release          # Optimized build
-make package-macos    # Package macOS (current arch) → ./tmp/runbeam-macos-<arch>-v<version>.tar.gz
-make package-linux    # Package Linux (x86_64 musl) → ./tmp/runbeam-linux-x86_64-v<version>.tar.gz
-make package-windows  # Package Windows (x86_64 msvc) → ./tmp/runbeam-windows-x86_64-v<version>.zip
-make clean-artifacts  # Remove ./tmp
+# Remove by label
+runbeam harmony:remove -l my-label
+
+# Remove by address
+runbeam harmony:remove -i 127.0.0.1 -p 8081
 ```
 
-Notes:
-- `package-linux` builds a static MUSL binary (`x86_64-unknown-linux-musl`). On macOS, you can optionally install `zig` and `cargo-zigbuild` for easier cross-compiles.
-- Checksums (`.sha256`) are generated alongside archives.
+You may also edit the JSON file directly if needed. Ensure the file remains valid JSON.
 
-## Continuous Integration (GitHub Actions)
-- Workflow: `.github/workflows/release.yml`
-- Triggers on tags matching `v*` (e.g., `v0.1.0`) and manual dispatch
-- Matrix builds and packages:
-  - Linux: `x86_64-unknown-linux-musl`
-  - macOS: `aarch64-apple-darwin`
-  - Windows: `x86_64-pc-windows-msvc`
-- Artifacts are uploaded to the GitHub Release for the tag
+## Logging and Verbosity
 
-Tag and push to publish release artifacts:
+- Increase verbosity with `-v`, `-vv`, or `-vvv`
+- Quiet mode with `-q`
+- Alternatively set `RUST_LOG` environment variable
+
+Examples:
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+runbeam -v list
+runbeam -q list
+RUST_LOG=debug runbeam list
 ```
 
-## Development
-- Logging: set `RUST_LOG` (e.g., `RUST_LOG=debug`) or pass `-v`/`-vv` for more verbosity; `-q` for quieter output.
-- Tests: none yet. We can add a scaffolding test suite upon request.
+## Command Reference
+
+Short overview of available commands:
+- **list**: Show all available commands
+- **harmony:add**: Register a Harmony instance using IP, port, optional path prefix, and label
+- **harmony:list**: List all registered Harmony instances
+- **harmony:remove**: Remove a registered instance by label or by IP and port
+- **harmony:info**: Show info for a registered instance selected by label or ID
+- **harmony:pipelines**: List pipelines for an instance selected by label or ID
+- **harmony:routes**: List routes for an instance selected by label or ID
+
+See [docs/commands.md](docs/commands.md) for full details of all options and examples.
 
 ## License
 
-This project is licenced under the Apache 2.0 License.
+Apache-2.0
+
+Homepage: https://harmonyproxy.com  
+Repository: https://github.com/aurabx/runbeam-cli

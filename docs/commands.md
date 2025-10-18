@@ -1,80 +1,124 @@
 # Commands
 
-This file contains a list of the intended commands for this application
+This document contains the complete command reference for the Runbeam CLI.
 
-## Harmony commands
+For data directory information and general usage, see the main [README.md](../README.md).
 
-These commands are used to run harmony instances, via the management API
+## Basic Commands
+
+### list
+
+Show all available commands.
+
+Usage:
+```sh
+runbeam list
+```
+
+## Harmony Commands
+
+These commands are used to manage Harmony instances via the management API.
 
 ### harmony:add
 
-Add a new Harmony instance
+Register a new Harmony instance.
 
-- `-i, --ip`: The IP address of the instance, defaults to 127.0.0.1
-- `-p, --port`: The port the instance is on, defaults to 8081
-- `-l, --label`: The internal label, defaults to `ip:port`
-- `-x, --path-prefix`: Path prefix for the management API (default `admin`)
+Options:
+- `-i, --ip <IP>`: IP address of the instance [default: 127.0.0.1]
+- `-p, --port <PORT>`: Port of the instance [default: 8081]
+- `-l, --label <LABEL>`: Internal label; defaults to "ip:port" if not provided
+- `-x, --path-prefix <PATH_PREFIX>`: Path prefix for the management API [default: admin]
 
-Example
-
-```bash
-runbeam harmony:add -i 127.0.0.1 -p 8081 -x admin
+Examples:
+```sh
+runbeam harmony:add -i 127.0.0.1 -p 8081 -x admin -l my-label
+runbeam harmony:add -i 192.168.1.100 -p 8082 -l production
 ```
 
 ### harmony:list
 
-List all registered Harmony instances (from the runbeam data directory).
+List all registered Harmony instances from the local data directory.
 
 Output is a table with headers: ID, LABEL, IP, PORT, PREFIX.
 
-Example
-
-```bash
+Usage:
+```sh
 runbeam harmony:list
 ```
 
 ### harmony:remove
 
-Remove a registered Harmony instance by label or by ip:port.
+Remove a registered Harmony instance by label or by IP:port.
 
-- Remove by label:
-  ```bash
-  runbeam harmony:remove -l my-label
-  ```
-- Remove by address:
-  ```bash
-  runbeam harmony:remove -i 127.0.0.1 -p 8081
-  ```
+Options:
+- `-l, --label <LABEL>`: Remove by label (conflicts with --ip/--port)
+- `-i, --ip <IP>`: Remove by IP (requires --port)
+- `-p, --port <PORT>`: Remove by port (requires --ip)
+
+Examples:
+```sh
+# Remove by label
+runbeam harmony:remove -l my-label
+
+# Remove by address
+runbeam harmony:remove -i 127.0.0.1 -p 8081
+```
 
 ### harmony:info
 
-Call the management API /{prefix}/info on a specific instance.
+Call the management API `GET /{prefix}/info` on a specific instance.
 
-Examples
+Options:
+- `--id <ID>`: Select instance by short ID (conflicts with --label)
+- `-l, --label <LABEL>`: Select instance by label (conflicts with --id)
 
-```bash
+Examples:
+```sh
 runbeam harmony:info --id 1a2b3c4d
 runbeam harmony:info -l my-label
 ```
 
 ### harmony:pipelines
 
-Call the management API /{prefix}/pipelines on a specific instance.
+Call the management API `GET /{prefix}/pipelines` on a specific instance.
 
-Examples
+Options:
+- `--id <ID>`: Select instance by short ID (conflicts with --label)
+- `-l, --label <LABEL>`: Select instance by label (conflicts with --id)
 
-```bash
+Examples:
+```sh
 runbeam harmony:pipelines --id 1a2b3c4d
 runbeam harmony:pipelines -l my-label
 ```
 
 ### harmony:routes
 
-Call the management API /{prefix}/routes on a specific instance.
+Call the management API `GET /{prefix}/routes` on a specific instance.
 
-Examples
+Options:
+- `--id <ID>`: Select instance by short ID (conflicts with --label)
+- `-l, --label <LABEL>`: Select instance by label (conflicts with --id)
 
-```bash
+Examples:
+```sh
 runbeam harmony:routes --id 1a2b3c4d
 runbeam harmony:routes -l my-label
+```
+
+## Global Options
+
+The following options are available for all commands:
+
+- `-v, --verbose`: Increase output verbosity (can be repeated: -v, -vv, -vvv)
+- `-q, --quiet`: Reduce output (quiet mode)
+- `-h, --help`: Print help information
+- `-V, --version`: Print version information
+
+Examples:
+```sh
+runbeam -v harmony:list
+runbeam -vv harmony:info -l my-label
+runbeam -q harmony:add -i 127.0.0.1 -p 8081
+RUST_LOG=debug runbeam harmony:list
 ```
