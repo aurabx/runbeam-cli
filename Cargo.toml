@@ -2,6 +2,17 @@
 name = "runbeam-cli"
 version = "0.1.0"
 edition = "2024"
+authors = ["Aurabox <hello@aurabox.cloud>"]
+description = "CLI for managing Runbeam and Harmony"
+license = "MIT"
+repository = "https://github.com/aurabx/runbeam-cli"
+homepage = "https://harmonyproxy.com"
+keywords = ["runbeam", "harmony"]
+exclude = [
+    ".github",
+    "docs",
+    "WARP.md"
+]
 
 # Ensure the binary produced is named `runbeam`
 [[bin]]
