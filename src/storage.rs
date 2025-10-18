@@ -159,3 +159,14 @@ pub fn remove_harmony_instance_by_addr(ip: &str, port: u16) -> Result<bool> {
     }
     Ok(changed)
 }
+
+pub fn remove_harmony_instance_by_id(id: &str) -> Result<bool> {
+    let mut list = load_harmony_instances()?;
+    let before = list.len();
+    list.retain(|i| i.id != id);
+    let changed = list.len() != before;
+    if changed {
+        save_harmony_instances(&list)?;
+    }
+    Ok(changed)
+}

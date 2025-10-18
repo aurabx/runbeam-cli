@@ -51,8 +51,13 @@ fn main() -> Result<()> {
         Some(cli::Command::HarmonyList) => {
             harmony::harmony::harmony_list()?;
         }
-        Some(cli::Command::HarmonyRemove { label, ip, port }) => {
-            harmony::harmony::harmony_remove(label.as_deref(), ip.as_deref(), port)?;
+        Some(cli::Command::HarmonyRemove {
+            id,
+            label,
+            ip,
+            port,
+        }) => {
+            harmony::harmony::harmony_remove(id.as_deref(), label.as_deref(), ip.as_deref(), port)?;
         }
         Some(cli::Command::HarmonyInfo { id, label }) => {
             harmony::management::info(id.as_deref(), label.as_deref())?;

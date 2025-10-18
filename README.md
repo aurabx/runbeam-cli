@@ -88,6 +88,9 @@ The CLI stores its data in a user-specific file:
 
 You can remove entries using the CLI:
 ```sh
+# Remove by ID
+runbeam harmony:remove --id 1a2b3c4d
+
 # Remove by label
 runbeam harmony:remove -l my-label
 
@@ -116,7 +119,7 @@ Short overview of available commands:
 - **list**: Show all available commands
 - **harmony:add**: Register a Harmony instance using IP, port, optional path prefix, and label
 - **harmony:list**: List all registered Harmony instances
-- **harmony:remove**: Remove a registered instance by label or by IP and port
+- **harmony:remove**: Remove a registered instance by ID, label, or by IP and port
 - **harmony:info**: Show info for a registered instance selected by label or ID
 - **harmony:pipelines**: List pipelines for an instance selected by label or ID
 - **harmony:routes**: List routes for an instance selected by label or ID

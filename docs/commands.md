@@ -48,15 +48,19 @@ runbeam harmony:list
 
 ### harmony:remove
 
-Remove a registered Harmony instance by label or by IP:port.
+Remove a registered Harmony instance by ID, label, or by IP:port.
 
 Options:
-- `-l, --label <LABEL>`: Remove by label (conflicts with --ip/--port)
+- `--id <ID>`: Remove by ID (conflicts with --label/--ip/--port)
+- `-l, --label <LABEL>`: Remove by label (conflicts with --id/--ip/--port)
 - `-i, --ip <IP>`: Remove by IP (requires --port)
 - `-p, --port <PORT>`: Remove by port (requires --ip)
 
 Examples:
 ```sh
+# Remove by ID
+runbeam harmony:remove --id 1a2b3c4d
+
 # Remove by label
 runbeam harmony:remove -l my-label
 

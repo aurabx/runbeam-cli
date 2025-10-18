@@ -46,11 +46,14 @@ pub enum Command {
     #[command(name = "harmony:list")]
     HarmonyList,
 
-    /// Remove a registered Harmony instance by label or ip:port
+    /// Remove a registered Harmony instance by ID, label, or ip:port
     #[command(name = "harmony:remove")]
     HarmonyRemove {
-        /// Remove by label (conflicts with --ip/--port)
-        #[arg(short = 'l', long = "label", conflicts_with_all = ["ip", "port"])]
+        /// Remove by ID (conflicts with --label/--ip/--port)
+        #[arg(long = "id", conflicts_with_all = ["label", "ip", "port"])]
+        id: Option<String>,
+        /// Remove by label (conflicts with --id/--ip/--port)
+        #[arg(short = 'l', long = "label", conflicts_with_all = ["id", "ip", "port"])]
         label: Option<String>,
         /// Remove by IP (requires --port)
         #[arg(short = 'i', long = "ip", requires = "port")]

@@ -114,10 +114,21 @@ pub fn harmony_list() -> anyhow::Result<()> {
 }
 
 pub fn harmony_remove(
+    id: Option<&str>,
     label: Option<&str>,
     ip: Option<&str>,
     port: Option<u16>,
 ) -> anyhow::Result<()> {
+    if let Some(id) = id {
+        let removed = crate::storage::remove_harmony_instance_by_id(id)?;
+        if removed {
+            println!("Removed Harmony instance with id '{}'.", id);
+        } else {
+            println!("No Harmony instance found with id '{}'.", id);
+        }
+        return Ok(());
+    }
+
     if let Some(label) = label {
         let removed = crate::storage::remove_harmony_instance_by_label(label)?;
         if removed {
@@ -139,7 +150,7 @@ pub fn harmony_remove(
             Ok(())
         }
         _ => {
-            anyhow::bail!("provide either --label or both --ip and --port")
+            anyhow::bail!("provide --id, --label, or both --ip and --port")
         }
     }
 }
