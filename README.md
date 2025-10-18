@@ -87,4 +87,5 @@ git push origin v0.1.0
 - Tests: none yet. We can add a scaffolding test suite upon request.
 
 ## License
-TBD. Add the appropriate license to the repository if required (e.g., `LICENSE` file and `license` field in `Cargo.toml`).
+
+This project is licenced under the Apache 2.0 License.
