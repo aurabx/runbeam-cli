@@ -1,11 +1,12 @@
 mod cli;
 mod commands;
+mod storage;
 
 use anyhow::Result;
 use clap::Parser;
-use tracing::{debug, warn};
-use tracing_subscriber::{fmt, EnvFilter};
 use commands::{basic, harmony};
+use tracing::{debug, warn};
+use tracing_subscriber::{EnvFilter, fmt};
 
 fn init_tracing(verbosity: u8, quiet: bool) {
     // Base level: info, increase with -v; quiet forces warn
@@ -36,14 +37,31 @@ fn main() -> Result<()> {
     debug!(?args.verbose, quiet = args.quiet, "logging initialized");
 
     match args.command {
-        Some(cli::Command::Echo { text }) => {
-            basic::echo(&text)?;
+        Some(cli::Command::List) => {
+            basic::list_commands()?;
         }
-        Some(cli::Command::Ping) => {
-            basic::ping()?;
+        Some(cli::Command::HarmonyAdd {
+            ip,
+            port,
+            label,
+            path_prefix,
+        }) => {
+            harmony::harmony::harmony_add(&ip, port, label.as_deref(), &path_prefix)?;
         }
-        Some(cli::Command::HarmonyAdd { text}) => {
-            harmony::harmony::harmony_add(&text)?;
+        Some(cli::Command::HarmonyList) => {
+            harmony::harmony::harmony_list()?;
+        }
+        Some(cli::Command::HarmonyRemove { label, ip, port }) => {
+            harmony::harmony::harmony_remove(label.as_deref(), ip.as_deref(), port)?;
+        }
+        Some(cli::Command::HarmonyInfo { id, label }) => {
+            harmony::management::info(id.as_deref(), label.as_deref())?;
+        }
+        Some(cli::Command::HarmonyPipelines { id, label }) => {
+            harmony::management::pipelines(id.as_deref(), label.as_deref())?;
+        }
+        Some(cli::Command::HarmonyRoutes { id, label }) => {
+            harmony::management::routes(id.as_deref(), label.as_deref())?;
         }
         None => {
             // No subcommand: show help-like hint

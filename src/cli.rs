@@ -22,9 +22,74 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Print the provided text (example command)
-    Echo { text: String, },
-    /// Simple liveness check (example command)
-    Ping,
-    HarmonyAdd { text:  String, },
+    /// List available commands
+    List,
+
+    /// Add a new Harmony instance via the management API
+    #[command(name = "harmony:add")]
+    HarmonyAdd {
+        /// IP address of the instance
+        #[arg(short = 'i', long = "ip", default_value = "127.0.0.1")]
+        ip: String,
+        /// Port of the instance
+        #[arg(short = 'p', long = "port", default_value_t = 8081)]
+        port: u16,
+        /// Internal label; defaults to "ip:port" if not provided
+        #[arg(short = 'l', long = "label")]
+        label: Option<String>,
+        /// Path prefix for the management API (e.g. "admin")
+        #[arg(short = 'x', long = "path-prefix", default_value = "admin")]
+        path_prefix: String,
+    },
+
+    /// List registered Harmony instances
+    #[command(name = "harmony:list")]
+    HarmonyList,
+
+    /// Remove a registered Harmony instance by label or ip:port
+    #[command(name = "harmony:remove")]
+    HarmonyRemove {
+        /// Remove by label (conflicts with --ip/--port)
+        #[arg(short = 'l', long = "label", conflicts_with_all = ["ip", "port"])]
+        label: Option<String>,
+        /// Remove by IP (requires --port)
+        #[arg(short = 'i', long = "ip", requires = "port")]
+        ip: Option<String>,
+        /// Remove by port (requires --ip)
+        #[arg(short = 'p', long = "port", requires = "ip")]
+        port: Option<u16>,
+    },
+
+    /// Call management API: GET /{prefix}/info
+    #[command(name = "harmony:info")]
+    HarmonyInfo {
+        /// Select instance by short ID
+        #[arg(long = "id", conflicts_with = "label")]
+        id: Option<String>,
+        /// Select instance by label
+        #[arg(short = 'l', long = "label", conflicts_with = "id")]
+        label: Option<String>,
+    },
+
+    /// Call management API: GET /{prefix}/pipelines
+    #[command(name = "harmony:pipelines")]
+    HarmonyPipelines {
+        /// Select instance by short ID
+        #[arg(long = "id", conflicts_with = "label")]
+        id: Option<String>,
+        /// Select instance by label
+        #[arg(short = 'l', long = "label", conflicts_with = "id")]
+        label: Option<String>,
+    },
+
+    /// Call management API: GET /{prefix}/routes
+    #[command(name = "harmony:routes")]
+    HarmonyRoutes {
+        /// Select instance by short ID
+        #[arg(long = "id", conflicts_with = "label")]
+        id: Option<String>,
+        /// Select instance by label
+        #[arg(short = 'l', long = "label", conflicts_with = "id")]
+        label: Option<String>,
+    },
 }
