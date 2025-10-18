@@ -214,7 +214,7 @@ pub fn pipelines(id: Option<&str>, label: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-pub fn routes(id: Option<&str>, label: Option<&str>) -> Result<()> {
+pub fn routes(id: Option<&str>, label: Option<&str>, json: bool) -> Result<()> {
     let inst = resolve_instance(id, label)?;
     let url = format!("{}/routes", base_url(&inst));
     let client = Client::new();
@@ -227,7 +227,17 @@ pub fn routes(id: Option<&str>, label: Option<&str>) -> Result<()> {
         return Err(anyhow!("{} {}", resp.status(), url));
     }
 
-    let json: Value = resp.json().context("parsing JSON response")?;
-    println!("{}", serde_json::to_string_pretty(&json)?);
+    let json_value: Value = resp.json().context("parsing JSON response")?;
+    
+    if json {
+        println!("{}", serde_json::to_string_pretty(&json_value)?);
+    } else {
+        // Render as table
+        if let Some(routes_array) = json_value.get("routes").and_then(|v| v.as_array()) {
+            render_array_of_objects(routes_array);
+        } else {
+            render_json_table(&json_value);
+        }
+    }
     Ok(())
 }

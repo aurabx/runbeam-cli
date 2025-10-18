@@ -65,8 +65,8 @@ fn main() -> Result<()> {
         Some(cli::Command::HarmonyPipelines { id, label }) => {
             harmony::management::pipelines(id.as_deref(), label.as_deref())?;
         }
-        Some(cli::Command::HarmonyRoutes { id, label }) => {
-            harmony::management::routes(id.as_deref(), label.as_deref())?;
+        Some(cli::Command::HarmonyRoutes { id, label, json }) => {
+            harmony::management::routes(id.as_deref(), label.as_deref(), json)?;
         }
         None => {
             // No subcommand: show help-like hint

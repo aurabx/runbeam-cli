@@ -94,5 +94,8 @@ pub enum Command {
         /// Select instance by label
         #[arg(short = 'l', long = "label", conflicts_with = "id")]
         label: Option<String>,
+        /// Output raw JSON instead of table
+        #[arg(long = "json")]
+        json: bool,
     },
 }

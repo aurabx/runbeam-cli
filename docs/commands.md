@@ -100,14 +100,21 @@ runbeam harmony:pipelines -l my-label
 
 Call the management API `GET /{prefix}/routes` on a specific instance.
 
+By default, displays routes as a table. Use `--json` for machine-readable output.
+
 Options:
 - `--id <ID>`: Select instance by short ID (conflicts with --label)
 - `-l, --label <LABEL>`: Select instance by label (conflicts with --id)
+- `--json`: Output raw JSON instead of table
 
 Examples:
 ```sh
+# Display routes as a table (default)
 runbeam harmony:routes --id 1a2b3c4d
 runbeam harmony:routes -l my-label
+
+# Output raw JSON for machine processing
+runbeam harmony:routes --id 1a2b3c4d --json
 ```
 
 ## Global Options
