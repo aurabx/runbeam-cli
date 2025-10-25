@@ -49,6 +49,19 @@ cargo run -- -v ping                # Increase verbosity (-v, -vv, -vvv)
 cargo run -- -q ping                # Quiet mode (warnings only)
 ```
 
+### Configuration
+```sh
+runbeam config:get                            # Show all configuration
+runbeam config:get api-url                    # Show specific config value
+runbeam config:set api-url https://api.runbeam.com  # Set API URL
+runbeam config:unset api-url                  # Unset API URL (revert to env or default)
+```
+
+Configuration priority (highest to lowest):
+1. Config file (`~/.runbeam/config.json`)
+2. Environment variable (`RUNBEAM_API_URL`)
+3. Default (`http://runbeam.lndo.site`)
+
 ## High-Level Architecture
 
 ### Entry Point and Flow
@@ -60,6 +73,7 @@ cargo run -- -q ping                # Quiet mode (warnings only)
 - Current structure:
   - `src/commands/auth.rs`: Authentication commands (login, logout)
   - `src/commands/basic.rs`: Basic utility commands
+  - `src/commands/config.rs`: Configuration management (set, get, unset)
   - `src/commands/harmony/`: Harmony proxy management commands
 - Command dispatch happens in `main.rs` matching clap subcommands to handler functions
 
@@ -73,9 +87,13 @@ cargo run -- -q ping                # Quiet mode (warnings only)
 - Temporary files and packaging artifacts: `./tmp/` directory
 - Release build optimizations: LTO thin, panic=abort, opt-level="z"
 - Dependencies: clap (CLI), anyhow (errors), tracing + tracing-subscriber (logging), reqwest (HTTP), open (browser opening)
+- Configuration: CLI configuration stored at `~/.runbeam/config.json`
+  - API URL precedence: config file > `RUNBEAM_API_URL` environment variable > default (`http://runbeam.lndo.site`)
+  - Managed via `runbeam config:set`, `config:get`, and `config:unset` commands
+  - Example: `runbeam config:set api-url https://api.runbeam.com`
 - Authentication: Browser-based OAuth flow with device tokens (similar to Heroku/Fly.io)
   - Token stored at `~/.runbeam/auth.json`
-  - API URL configurable via `RUNBEAM_API_URL` environment variable (default: `http://runbeam.lndo.site`)
+  - Uses configured API URL from config file, environment variable, or default
   - Polls server every 5 seconds with 10-minute timeout
 - Harmony Authorization: Two-phase authentication model
   - Phase 1: User authenticates via `runbeam login` (short-lived token)

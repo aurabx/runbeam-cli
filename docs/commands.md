@@ -15,6 +15,84 @@ Usage:
 runbeam list
 ```
 
+## Authentication Commands
+
+### login
+
+Log in to Runbeam via browser authentication. Opens a browser window for OAuth authentication and saves the JWT token to `~/.runbeam/auth.json`.
+
+The login process:
+1. Requests a device token from the API
+2. Opens your browser to the authentication page
+3. Polls the server every 5 seconds until authentication completes
+4. Saves the JWT token locally
+
+Usage:
+```sh
+runbeam login
+```
+
+### logout
+
+Log out and clear stored authentication. Removes the JWT token from `~/.runbeam/auth.json`.
+
+Usage:
+```sh
+runbeam logout
+```
+
+## Configuration Commands
+
+The CLI stores configuration in `~/.runbeam/config.json`. Configuration values have the following precedence (highest to lowest):
+1. Config file (`~/.runbeam/config.json`)
+2. Environment variable (e.g., `RUNBEAM_API_URL`)
+3. Default value
+
+### config:set
+
+Set a configuration value.
+
+Arguments:
+- `<KEY>`: Configuration key (e.g., "api-url")
+- `<VALUE>`: Configuration value
+
+Supported keys:
+- `api-url`: The Runbeam API URL (must start with http:// or https://)
+
+Examples:
+```sh
+runbeam config:set api-url https://api.runbeam.com
+runbeam config:set api-url http://localhost:8000
+```
+
+### config:get
+
+Get a configuration value or show all configuration.
+
+Arguments:
+- `[KEY]`: Optional configuration key (shows all config if not provided)
+
+Examples:
+```sh
+# Show all configuration
+runbeam config:get
+
+# Show specific configuration value
+runbeam config:get api-url
+```
+
+### config:unset
+
+Unset a configuration value (revert to environment variable or default).
+
+Arguments:
+- `<KEY>`: Configuration key to unset
+
+Examples:
+```sh
+runbeam config:unset api-url
+```
+
 ## Harmony Commands
 
 These commands are used to manage Harmony instances via the management API.
@@ -115,6 +193,31 @@ runbeam harmony:routes -l my-label
 
 # Output raw JSON for machine processing
 runbeam harmony:routes --id 1a2b3c4d --json
+```
+
+### harmony:authorize
+
+Authorize a Harmony instance to communicate with Runbeam Cloud. This exchanges your user token for a machine-scoped token that the Harmony instance can use.
+
+**Prerequisites**: You must be logged in (`runbeam login`) before authorizing a Harmony instance.
+
+Authorization flow:
+1. Uses your user authentication token from `runbeam login`
+2. Calls the Harmony management API with your token
+3. Harmony exchanges your token for a machine-scoped token (30-day expiry)
+4. Harmony stores the machine token for future API calls
+
+Options:
+- `--id <ID>`: Select instance by short ID (conflicts with --label)
+- `-l, --label <LABEL>`: Select instance by label (conflicts with --id)
+
+Examples:
+```sh
+# Authorize by instance ID
+runbeam harmony:authorize --id 1a2b3c4d
+
+# Authorize by label
+runbeam harmony:authorize -l my-label
 ```
 
 ## Global Options

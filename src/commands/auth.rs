@@ -4,6 +4,7 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{debug, info, warn};
 
+use crate::commands::config;
 use crate::storage::{self, CliAuth, UserInfo};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,9 +34,9 @@ struct UserData {
     name: String,
 }
 
-/// Get the API base URL from environment or use default
-fn api_base_url() -> String {
-    std::env::var("RUNBEAM_API_URL").unwrap_or_else(|_| "http://runbeam.lndo.site".to_string())
+/// Get the API base URL from config, environment, or use default
+fn api_base_url() -> Result<String> {
+    config::get_api_url()
 }
 
 /// Perform the login flow: start login, open browser, poll for completion
@@ -51,7 +52,7 @@ pub fn login() -> Result<()> {
     }
 
     // Step 1: Start the login process
-    let base_url = api_base_url();
+    let base_url = api_base_url()?;
     let start_url = format!("{}/api/cli/start-login", base_url);
     
     debug!("Requesting device token from {}", start_url);
@@ -118,7 +119,7 @@ pub fn login() -> Result<()> {
         let response = client
             .get(&check_url)
             .send()
-            .with_context(|| format!("failed to check login status"))?;
+            .with_context(|| "failed to check login status".to_string())?;
 
         let status_code = response.status();
         let check_data: CheckLoginResponse = response

@@ -4,7 +4,7 @@ mod storage;
 
 use anyhow::Result;
 use clap::Parser;
-use commands::{auth, basic, harmony};
+use commands::{auth, basic, config, harmony};
 use tracing::{debug, warn};
 use tracing_subscriber::{EnvFilter, fmt};
 
@@ -83,6 +83,15 @@ fn main() -> Result<()> {
                 Ok(_) => println!("✓ Browser opened successfully"),
                 Err(e) => println!("✗ Failed to open browser: {}", e),
             }
+        }
+        Some(cli::Command::ConfigSet { key, value }) => {
+            config::set_config(&key, &value)?;
+        }
+        Some(cli::Command::ConfigGet { key }) => {
+            config::get_config(key.as_deref())?;
+        }
+        Some(cli::Command::ConfigUnset { key }) => {
+            config::unset_config(&key)?;
         }
         None => {
             // No subcommand: show help-like hint

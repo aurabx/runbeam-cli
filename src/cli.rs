@@ -119,4 +119,27 @@ pub enum Command {
     /// Test browser opening (development only)
     #[command(name = "test-browser")]
     TestBrowser,
+
+    /// Set a configuration value
+    #[command(name = "config:set")]
+    ConfigSet {
+        /// Configuration key (e.g., "api-url")
+        key: String,
+        /// Configuration value
+        value: String,
+    },
+
+    /// Get a configuration value or show all config
+    #[command(name = "config:get")]
+    ConfigGet {
+        /// Configuration key (optional, shows all if not provided)
+        key: Option<String>,
+    },
+
+    /// Unset a configuration value
+    #[command(name = "config:unset")]
+    ConfigUnset {
+        /// Configuration key to unset
+        key: String,
+    },
 }
