@@ -4,7 +4,7 @@ mod storage;
 
 use anyhow::Result;
 use clap::Parser;
-use commands::{basic, harmony};
+use commands::{auth, basic, harmony};
 use tracing::{debug, warn};
 use tracing_subscriber::{EnvFilter, fmt};
 
@@ -40,6 +40,12 @@ fn main() -> Result<()> {
         Some(cli::Command::List) => {
             basic::list_commands()?;
         }
+        Some(cli::Command::Login) => {
+            auth::login()?;
+        }
+        Some(cli::Command::Logout) => {
+            auth::logout()?;
+        }
         Some(cli::Command::HarmonyAdd {
             ip,
             port,
@@ -67,6 +73,16 @@ fn main() -> Result<()> {
         }
         Some(cli::Command::HarmonyRoutes { id, label, json }) => {
             harmony::management::routes(id.as_deref(), label.as_deref(), json)?;
+        }
+        Some(cli::Command::HarmonyAuthorize { id, label }) => {
+            auth::authorize_harmony(id.as_deref(), label.as_deref())?;
+        }
+        Some(cli::Command::TestBrowser) => {
+            println!("Testing browser opening...");
+            match open::that_detached("https://www.google.com") {
+                Ok(_) => println!("✓ Browser opened successfully"),
+                Err(e) => println!("✗ Failed to open browser: {}", e),
+            }
         }
         None => {
             // No subcommand: show help-like hint

@@ -25,6 +25,12 @@ pub enum Command {
     /// List available commands
     List,
 
+    /// Log in to Runbeam via browser authentication
+    Login,
+
+    /// Log out and clear stored authentication
+    Logout,
+
     /// Add a new Harmony instance via the management API
     #[command(name = "harmony:add")]
     HarmonyAdd {
@@ -98,4 +104,19 @@ pub enum Command {
         #[arg(long = "json")]
         json: bool,
     },
+
+    /// Authorize a Harmony instance to communicate with Runbeam Cloud
+    #[command(name = "harmony:authorize")]
+    HarmonyAuthorize {
+        /// Select instance by short ID
+        #[arg(long = "id", conflicts_with = "label")]
+        id: Option<String>,
+        /// Select instance by label
+        #[arg(short = 'l', long = "label", conflicts_with = "id")]
+        label: Option<String>,
+    },
+
+    /// Test browser opening (development only)
+    #[command(name = "test-browser")]
+    TestBrowser,
 }

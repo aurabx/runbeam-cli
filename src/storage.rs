@@ -17,6 +17,25 @@ pub struct HarmonyInstance {
     pub path_prefix: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CliAuth {
+    /// JWT token for API authentication
+    pub token: String,
+    /// Token expiration timestamp (seconds since epoch)
+    #[serde(default)]
+    pub expires_at: Option<i64>,
+    /// User information from JWT claims
+    #[serde(default)]
+    pub user: Option<UserInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UserInfo {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+}
+
 fn default_path_prefix() -> String {
     "admin".to_string()
 }
@@ -58,6 +77,10 @@ pub fn data_dir() -> Result<PathBuf> {
 
 fn harmony_file_path() -> Result<PathBuf> {
     Ok(data_dir()?.join("harmony.json"))
+}
+
+fn auth_file_path() -> Result<PathBuf> {
+    Ok(data_dir()?.join("auth.json"))
 }
 
 pub fn load_harmony_instances() -> Result<Vec<HarmonyInstance>> {
@@ -169,4 +192,45 @@ pub fn remove_harmony_instance_by_id(id: &str) -> Result<bool> {
         save_harmony_instances(&list)?;
     }
     Ok(changed)
+}
+
+// ============================================================================
+// CLI Authentication Storage
+// ============================================================================
+
+pub fn load_auth() -> Result<Option<CliAuth>> {
+    let path = auth_file_path()?;
+    if !path.exists() {
+        return Ok(None);
+    }
+    let data = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+    let auth: CliAuth =
+        serde_json::from_str(&data).with_context(|| format!("parsing {}", path.display()))?;
+    Ok(Some(auth))
+}
+
+pub fn save_auth(auth: &CliAuth) -> Result<()> {
+    let path = auth_file_path()?;
+    let tmp_path = tmp_path_for(&path);
+    let json = serde_json::to_string_pretty(auth)?;
+    // Write atomically: write temp, then rename
+    {
+        let mut f = fs::File::create(&tmp_path)
+            .with_context(|| format!("creating {}", tmp_path.display()))?;
+        f.write_all(json.as_bytes())?;
+        f.sync_all().ok();
+    }
+    fs::rename(&tmp_path, &path)
+        .with_context(|| format!("rename {} -> {}", tmp_path.display(), path.display()))?;
+    Ok(())
+}
+
+pub fn clear_auth() -> Result<bool> {
+    let path = auth_file_path()?;
+    if path.exists() {
+        fs::remove_file(&path).with_context(|| format!("removing {}", path.display()))?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
 }

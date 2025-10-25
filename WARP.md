@@ -58,8 +58,9 @@ cargo run -- -q ping                # Quiet mode (warnings only)
 ### Command Organization
 - Commands are organized under `src/commands/` as modules
 - Current structure:
-  - `src/commands/basic.rs`: Contains `echo` and `ping` commands
-  - `src/commands/harmony/`: Placeholder module for future harmony-related commands
+  - `src/commands/auth.rs`: Authentication commands (login, logout)
+  - `src/commands/basic.rs`: Basic utility commands
+  - `src/commands/harmony/`: Harmony proxy management commands
 - Command dispatch happens in `main.rs` matching clap subcommands to handler functions
 
 ### Adding New Commands
@@ -71,7 +72,16 @@ cargo run -- -q ping                # Quiet mode (warnings only)
 - Binary name: `runbeam` (configured in Cargo.toml `[[bin]]`)
 - Temporary files and packaging artifacts: `./tmp/` directory
 - Release build optimizations: LTO thin, panic=abort, opt-level="z"
-- Dependencies: clap (CLI), anyhow (errors), tracing + tracing-subscriber (logging)
+- Dependencies: clap (CLI), anyhow (errors), tracing + tracing-subscriber (logging), reqwest (HTTP), open (browser opening)
+- Authentication: Browser-based OAuth flow with device tokens (similar to Heroku/Fly.io)
+  - Token stored at `~/.runbeam/auth.json`
+  - API URL configurable via `RUNBEAM_API_URL` environment variable (default: `http://runbeam.lndo.site`)
+  - Polls server every 5 seconds with 10-minute timeout
+- Harmony Authorization: Two-phase authentication model
+  - Phase 1: User authenticates via `runbeam login` (short-lived token)
+  - Phase 2: User authorizes Harmony instance via `runbeam harmony:authorize`
+  - Harmony exchanges user token for machine-scoped token (30-day expiry)
+  - Separation of concerns: user identity vs machine identity
 
 ## CI/Release Process
 

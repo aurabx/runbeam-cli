@@ -68,8 +68,14 @@ cargo install --git https://github.com/aurabx/runbeam-cli
 # List available commands
 runbeam list
 
+# Authenticate with Runbeam (opens browser)
+runbeam login
+
 # Add a Harmony instance
 runbeam harmony:add -i 127.0.0.1 -p 8081 -x admin -l my-label
+
+# Authorize the Harmony instance to communicate with Runbeam Cloud
+runbeam harmony:authorize -l my-label
 
 # List registered instances
 runbeam harmony:list
@@ -78,13 +84,68 @@ runbeam harmony:list
 runbeam harmony:info -l my-label
 runbeam harmony:pipelines -l my-label
 runbeam harmony:routes -l my-label
+
+# Logout when done
+runbeam logout
 ```
+
+## Authentication
+
+The CLI uses browser-based OAuth authentication:
+
+```sh
+# Log in (opens browser for authentication)
+runbeam login
+
+# Log out (clears stored token)
+runbeam logout
+```
+
+**Authentication Flow:**
+1. Run `runbeam login`
+2. Your browser opens to the Runbeam authentication page
+3. Log in with your Runbeam account (via OIDC/SSO)
+4. Authorize the CLI access
+5. Return to your terminal - you're now authenticated!
+
+The authentication token is stored securely at:
+- **macOS and Linux**: `~/.runbeam/auth.json`
+- **Windows**: `%APPDATA%\runbeam\auth.json`
+
+**Environment Variables:**
+- `RUNBEAM_API_URL`: Override the API base URL (default: `http://runbeam.lndo.site`)
+
+## Harmony Authorization
+
+After adding a Harmony instance, you need to authorize it to communicate with the Runbeam Cloud API:
+
+```sh
+# Authorize a Harmony instance by label
+runbeam harmony:authorize -l my-label
+
+# Or by instance ID
+runbeam harmony:authorize --id 1a2b3c4d
+```
+
+**Authorization Flow:**
+1. CLI loads your user authentication token
+2. CLI calls the Harmony management API with your token
+3. Harmony validates the token and contacts Runbeam Cloud
+4. Runbeam Cloud issues a machine-scoped token (30-day expiry)
+5. Harmony stores the machine token locally
+6. Harmony can now make authenticated API calls to Runbeam Cloud
+
+**Security Model:**
+- User tokens are short-lived (used only for authorization)
+- Machine tokens are scoped to specific Harmony instances
+- You can revoke a Harmony instance's access independently
+- Tokens can be renewed before expiry
 
 ## Data Directory
 
-The CLI stores its data in a user-specific file:
-- **macOS and Linux**: `~/.runbeam/harmony.json`
-- **Windows**: `%APPDATA%\runbeam\harmony.json`
+The CLI stores configuration data in user-specific files:
+- **macOS and Linux**: `~/.runbeam/harmony.json` (Harmony instances), `~/.runbeam/auth.json` (authentication token)
+- **Windows**: `%APPDATA%\runbeam\harmony.json`, `%APPDATA%\runbeam\auth.json`
 
 You can remove entries using the CLI:
 ```sh
@@ -113,16 +174,6 @@ runbeam -q list
 RUST_LOG=debug runbeam list
 ```
 
-## Command Reference
-
-Short overview of available commands:
-- **list**: Show all available commands
-- **harmony:add**: Register a Harmony instance using IP, port, optional path prefix, and label
-- **harmony:list**: List all registered Harmony instances
-- **harmony:remove**: Remove a registered instance by ID, label, or by IP and port
-- **harmony:info**: Show info for a registered instance selected by label or ID
-- **harmony:pipelines**: List pipelines for an instance selected by label or ID
-- **harmony:routes**: List routes for an instance selected by label or ID
 
 See [docs/commands.md](docs/commands.md) for full details of all options and examples.
 
