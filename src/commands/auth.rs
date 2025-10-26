@@ -1,11 +1,12 @@
 use anyhow::{Context, Result};
+use runbeam_sdk::{RunbeamClient, UserInfo, validate_jwt_token as sdk_validate_jwt};
 use serde::{Deserialize, Serialize};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{debug, info, warn};
 
 use crate::commands::config;
-use crate::storage::{self, CliAuth, UserInfo};
+use crate::storage::{self, CliAuth};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct StartLoginResponse {
@@ -22,16 +23,9 @@ struct CheckLoginResponse {
     #[serde(default)]
     expires_in: Option<i64>,
     #[serde(default)]
-    user: Option<UserData>,
+    user: Option<UserInfo>,
     #[serde(default)]
     message: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct UserData {
-    id: String,
-    email: String,
-    name: String,
 }
 
 /// Get the API base URL from config, environment, or use default
@@ -167,12 +161,8 @@ pub fn login() -> Result<()> {
                     now + seconds
                 });
 
-                // Convert UserData to UserInfo
-                let user = check_data.user.map(|u| UserInfo {
-                    id: u.id,
-                    email: u.email,
-                    name: u.name,
-                });
+                // User info is already in the correct format (UserInfo from SDK)
+                let user = check_data.user.clone();
 
                 let auth = CliAuth {
                     token,
@@ -197,10 +187,14 @@ pub fn login() -> Result<()> {
                     );
                 }
 
-                // Verify the token using RS256
-                match crate::jwt::validate_jwt_token(&token_clone, &base_url) {
+                // Verify the token using SDK (RS256 with JWKS)
+                let validation_result = tokio::runtime::Runtime::new()
+                    .expect("Failed to create Tokio runtime")
+                    .block_on(sdk_validate_jwt(&token_clone, 24));
+
+                match validation_result {
                     Ok(jwt_claims) => {
-                        debug!("JWT verification successful: kid={:?}", jwt_claims.kid);
+                        debug!("JWT verification successful: iss={}", jwt_claims.iss);
                         println!("   Token verified using RS256 ✓");
                     }
                     Err(e) => {
@@ -287,45 +281,50 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     println!("   Address: {}:{}", instance.ip, instance.port);
     println!();
 
-    // Call Harmony management API - Harmony will then call Runbeam to get machine token
-    let harmony_auth_url = format!(
-        "http://{}:{}/{}/authorize",
-        instance.ip, instance.port, instance.path_prefix
-    );
+    // Use SDK's RunbeamClient to authorize the gateway
+    // Get API base URL from config
+    let api_url = api_base_url()?;
+    debug!("Using API URL: {}", api_url);
 
-    debug!("Calling Harmony management API: {}", harmony_auth_url);
+    // Create SDK client and authorize gateway
+    let client = RunbeamClient::new(api_url);
 
-    let client = reqwest::blocking::Client::new();
-    let response = client
-        .post(&harmony_auth_url)
-        .header("Authorization", format!("Bearer {}", auth.token))
-        .json(&serde_json::json!({
-            "gateway_code": instance.id,
-        }))
-        .send()
-        .with_context(|| format!("Failed to connect to Harmony at {}", harmony_auth_url))?;
+    let auth_response = tokio::runtime::Runtime::new()
+        .expect("Failed to create Tokio runtime")
+        .block_on(client.authorize_gateway(
+            &auth.token,
+            &instance.id,
+            None, // machine_public_key
+            None, // metadata
+        ))
+        .context("Failed to authorize gateway with Runbeam Cloud")?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().unwrap_or_default();
-        anyhow::bail!("Harmony authorization failed: HTTP {} - {}", status, body);
-    }
-
-    let result: serde_json::Value = response
-        .json()
-        .context("Failed to parse Harmony response")?;
-
-    println!("✅ Harmony instance authorized successfully!");
+    println!("✅ Gateway authorized successfully!");
     println!();
-    println!("   The Harmony instance can now communicate with Runbeam Cloud.");
-    if let Some(expires_at) = result["expires_at"].as_str() {
-        println!("   Machine token expires at: {}", expires_at);
-    }
-    if let Some(expires_in) = result["expires_in"].as_i64() {
-        println!("   Machine token expires in {} days", expires_in / 86400);
+    println!(
+        "   Gateway: {} ({})",
+        auth_response.gateway.name, auth_response.gateway.code
+    );
+    println!("   Gateway ID: {}", auth_response.gateway.id);
+    println!("   Machine token expires at: {}", auth_response.expires_at);
+
+    // Calculate and display expiry in days
+    let expires_in_days = (auth_response.expires_in / 86400.0).round() as i64;
+    println!("   Machine token expires in {} days", expires_in_days);
+
+    if !auth_response.abilities.is_empty() {
+        println!("   Token abilities: {}", auth_response.abilities.join(", "));
     }
 
-    info!("Harmony instance authorized: {}", instance.id);
+    if let Some(authorized_by) = &auth_response.gateway.authorized_by {
+        println!(
+            "   Authorized by: {} ({})",
+            authorized_by.name, authorized_by.email
+        );
+    }
+    println!();
+
+    info!("Gateway authorized: {}", auth_response.gateway.id);
     Ok(())
 }
 
@@ -340,12 +339,12 @@ pub fn verify_token() -> Result<()> {
     println!("\n🔐 Verifying JWT token...");
     println!();
 
-    // Get API URL
-    let base_url = api_base_url()?;
-    debug!("Using API URL: {}", base_url);
+    // Validate the token using SDK (async)
+    let validation_result = tokio::runtime::Runtime::new()
+        .expect("Failed to create Tokio runtime")
+        .block_on(sdk_validate_jwt(&auth.token, 24));
 
-    // Validate the token
-    match crate::jwt::validate_jwt_token(&auth.token, &base_url) {
+    match validation_result {
         Ok(claims) => {
             println!("✅ Token is valid!");
             println!();
@@ -354,9 +353,6 @@ pub fn verify_token() -> Result<()> {
             println!("  Subject:      {}", claims.sub);
             if let Some(aud) = &claims.aud {
                 println!("  Audience:     {}", aud);
-            }
-            if let Some(kid) = &claims.kid {
-                println!("  Key ID:       {}", kid);
             }
             println!();
 

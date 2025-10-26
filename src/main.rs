@@ -1,6 +1,5 @@
 mod cli;
 mod commands;
-mod jwt;
 mod storage;
 
 use anyhow::Result;

@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use directories::BaseDirs;
+use runbeam_sdk::UserInfo;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
@@ -18,7 +19,7 @@ pub struct HarmonyInstance {
     pub path_prefix: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CliAuth {
     /// JWT token for API authentication
     pub token: String,
@@ -28,13 +29,6 @@ pub struct CliAuth {
     /// User information from JWT claims
     #[serde(default)]
     pub user: Option<UserInfo>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct UserInfo {
-    pub id: String,
-    pub email: String,
-    pub name: String,
 }
 
 fn default_path_prefix() -> String {
@@ -252,11 +246,15 @@ pub fn load_and_verify_auth() -> Result<Option<CliAuth>> {
     if let Some(ref auth) = auth {
         debug!("Verifying stored JWT token...");
 
-        // Get API URL for verification
-        let api_url = crate::commands::config::get_api_url()?;
+        // Get API URL for verification - no longer needed with SDK's auto-detection
+        // The SDK extracts the base URL from the JWT issuer claim
 
-        // Attempt to verify the token
-        match crate::jwt::validate_jwt_token(&auth.token, &api_url) {
+        // Attempt to verify the token using SDK (async call via runtime)
+        let validation_result = tokio::runtime::Runtime::new()
+            .expect("Failed to create Tokio runtime")
+            .block_on(runbeam_sdk::validate_jwt_token(&auth.token, 24));
+
+        match validation_result {
             Ok(claims) => {
                 debug!(
                     "Token verification successful: sub={}, exp={}",

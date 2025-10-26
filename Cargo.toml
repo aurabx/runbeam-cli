@@ -35,12 +35,10 @@ sha2 = "0.10"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 # Browser opening for authentication
 open = "5"
-# Async runtime for polling
-tokio = { version = "1", features = ["time", "rt"] }
-# JWT verification
-jsonwebtoken = "9"
-base64 = "0.22"
-url = "2"
+# Async runtime for SDK integration
+tokio = { version = "1", features = ["rt", "macros"] }
+# Runbeam SDK for API client and JWT validation
+runbeam-sdk = "0.1.0"
 
 [profile.release]
 lto = "thin"
