@@ -131,18 +131,16 @@ pub fn login() -> Result<()> {
             .with_context(|| "failed to check login status".to_string())?;
 
         let status_code = response.status();
-        
+
         // Check for non-success status codes
         if !status_code.is_success() {
-            let error_body = response.text().unwrap_or_else(|_| "<unable to read response>".to_string());
+            let error_body = response
+                .text()
+                .unwrap_or_else(|_| "<unable to read response>".to_string());
             debug!("Non-success response: {} - {}", status_code, error_body);
-            anyhow::bail!(
-                "Login check failed: HTTP {} - {}",
-                status_code,
-                error_body
-            );
+            anyhow::bail!("Login check failed: HTTP {} - {}", status_code, error_body);
         }
-        
+
         let check_data: CheckLoginResponse = response
             .json()
             .with_context(|| "failed to parse check login response")?;

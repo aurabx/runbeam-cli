@@ -15,11 +15,11 @@ Download a prebuilt binary from [GitHub Releases](https://github.com/aurabx/runb
 ### macOS
 ```sh
 # Verify checksum
-shasum -a 256 runbeam-macos-aarch64-v0.2.0.tar.gz
-cat runbeam-macos-aarch64-v0.2.0.tar.gz.sha256
+shasum -a 256 runbeam-macos-aarch64-v0.3.0.tar.gz
+cat runbeam-macos-aarch64-v0.3.0.tar.gz.sha256
 
 # Extract and install
-tar -xzf runbeam-macos-aarch64-v0.2.0.tar.gz
+tar -xzf runbeam-macos-aarch64-v0.3.0.tar.gz
 chmod +x runbeam
 mv runbeam /usr/local/bin
 # Or: mv runbeam ~/.local/bin and ensure ~/.local/bin is on PATH
@@ -28,11 +28,11 @@ mv runbeam /usr/local/bin
 ### Linux
 ```sh
 # Verify checksum
-sha256sum runbeam-linux-x86_64-v0.2.0.tar.gz
-cat runbeam-linux-x86_64-v0.2.0.tar.gz.sha256
+sha256sum runbeam-linux-x86_64-v0.3.0.tar.gz
+cat runbeam-linux-x86_64-v0.3.0.tar.gz.sha256
 
 # Extract and install
-tar -xzf runbeam-linux-x86_64-v0.2.0.tar.gz
+tar -xzf runbeam-linux-x86_64-v0.3.0.tar.gz
 chmod +x runbeam
 sudo mv runbeam /usr/local/bin
 # Or: mv runbeam ~/.local/bin and ensure it is on PATH
@@ -41,10 +41,10 @@ sudo mv runbeam /usr/local/bin
 ### Windows
 ```powershell
 # Verify checksum
-certutil -hashfile runbeam-windows-x86_64-v0.2.0.zip SHA256
+certutil -hashfile runbeam-windows-x86_64-v0.3.0.zip SHA256
 
 # Extract the ZIP using Explorer or PowerShell
-Expand-Archive .\runbeam-windows-x86_64-v0.2.0.zip -DestinationPath .
+Expand-Archive .\runbeam-windows-x86_64-v0.3.0.zip -DestinationPath .
 # Move runbeam.exe to a folder on your PATH or add the folder to PATH
 ```
 
@@ -70,6 +70,9 @@ runbeam list
 
 # Authenticate with Runbeam (opens browser)
 runbeam login
+
+# Verify your authentication token (optional)
+runbeam verify
 
 # Add a Harmony instance
 runbeam harmony:add -i 127.0.0.1 -p 8081 -x admin -l my-label
@@ -97,6 +100,9 @@ The CLI uses browser-based OAuth authentication:
 # Log in (opens browser for authentication)
 runbeam login
 
+# Verify stored authentication token
+runbeam verify
+
 # Log out (clears stored token)
 runbeam logout
 ```
@@ -112,8 +118,21 @@ The authentication token is stored securely at:
 - **macOS and Linux**: `~/.runbeam/auth.json`
 - **Windows**: `%APPDATA%\runbeam\auth.json`
 
+**Token Verification:**
+
+The CLI automatically verifies tokens during login using RS256 asymmetric cryptography:
+- Tokens are validated using public keys from the JWKS endpoint
+- Supports key rotation via Key ID (`kid`)
+- JWKS keys are cached for 1 hour (configurable via `RUNBEAM_JWKS_TTL` environment variable)
+
+You can manually verify your token at any time:
+```sh
+runbeam verify
+```
+
 **Environment Variables:**
 - `RUNBEAM_API_URL`: Override the API base URL (default: `http://runbeam.lndo.site`)
+- `RUNBEAM_JWKS_TTL`: JWKS cache duration in seconds (default: `3600` = 1 hour)
 
 ## Harmony Authorization
 

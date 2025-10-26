@@ -165,7 +165,10 @@ fn save_jwks_cache(jwks: &Jwks) -> Result<()> {
 /// Fetch JWKS from the API endpoint
 fn fetch_jwks(api_url: &str) -> Result<Jwks> {
     // JWKS endpoint is at /api/.well-known/jwks.json
-    let jwks_url = format!("{}/api/.well-known/jwks.json", api_url.trim_end_matches('/'));
+    let jwks_url = format!(
+        "{}/api/.well-known/jwks.json",
+        api_url.trim_end_matches('/')
+    );
     debug!("Fetching JWKS from {}", jwks_url);
 
     let client = reqwest::blocking::Client::builder()
@@ -271,7 +274,10 @@ pub fn validate_jwt_token(token: &str, api_url: &str) -> Result<JwtClaims> {
     let header = decode_header(token).context("failed to decode JWT header")?;
 
     let kid_from_header = header.kid.as_deref();
-    debug!("JWT header: alg={:?}, kid={:?}", header.alg, kid_from_header);
+    debug!(
+        "JWT header: alg={:?}, kid={:?}",
+        header.alg, kid_from_header
+    );
 
     // Fetch JWKS
     let jwks = get_jwks(api_url, false).context("failed to fetch JWKS for token verification")?;
@@ -286,8 +292,10 @@ pub fn validate_jwt_token(token: &str, api_url: &str) -> Result<JwtClaims> {
         // Do an insecure decode just to read the payload claims
         let mut insecure_validation = Validation::new(Algorithm::RS256);
         insecure_validation.insecure_disable_signature_validation();
-        
-        if let Ok(token_data) = decode::<JwtClaims>(token, &DecodingKey::from_secret(&[]), &insecure_validation) {
+
+        if let Ok(token_data) =
+            decode::<JwtClaims>(token, &DecodingKey::from_secret(&[]), &insecure_validation)
+        {
             token_data.claims.kid.clone()
         } else {
             None
@@ -295,15 +303,22 @@ pub fn validate_jwt_token(token: &str, api_url: &str) -> Result<JwtClaims> {
     } else {
         None
     };
-    
+
     // Determine final kid: prefer header, fallback to payload
     let kid = kid_from_header.map(|s| s.to_string()).or(kid_from_payload);
-    
+
     if let Some(ref kid_value) = kid {
-        debug!("Using kid: {} (from {})", kid_value,
-            if kid_from_header.is_some() { "header" } else { "payload" });
+        debug!(
+            "Using kid: {} (from {})",
+            kid_value,
+            if kid_from_header.is_some() {
+                "header"
+            } else {
+                "payload"
+            }
+        );
     }
-    
+
     // Find matching key by kid, or use first RS256 key
     let jwk = if let Some(kid_value) = &kid {
         jwks.keys
@@ -345,12 +360,19 @@ pub fn validate_jwt_token(token: &str, api_url: &str) -> Result<JwtClaims> {
     let kid = kid_from_header
         .map(|s| s.to_string())
         .or_else(|| claims.kid.clone());
-    
+
     if let Some(ref kid_value) = kid {
-        debug!("Using kid: {} (from {})", kid_value, 
-            if kid_from_header.is_some() { "header" } else { "payload" });
+        debug!(
+            "Using kid: {} (from {})",
+            kid_value,
+            if kid_from_header.is_some() {
+                "header"
+            } else {
+                "payload"
+            }
+        );
     }
-    
+
     // Store the resolved kid in claims for reference
     claims.kid = kid;
 
