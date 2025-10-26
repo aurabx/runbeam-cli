@@ -37,6 +37,10 @@ reqwest = { version = "0.12", features = ["blocking", "json"] }
 open = "5"
 # Async runtime for polling
 tokio = { version = "1", features = ["time", "rt"] }
+# JWT verification
+jsonwebtoken = "9"
+base64 = "0.22"
+url = "2"
 
 [profile.release]
 lto = "thin"

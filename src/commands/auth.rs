@@ -54,9 +54,9 @@ pub fn login() -> Result<()> {
     // Step 1: Start the login process
     let base_url = api_base_url()?;
     let start_url = format!("{}/api/cli/start-login", base_url);
-    
+
     debug!("Requesting device token from {}", start_url);
-    
+
     let client = reqwest::blocking::Client::new();
     let response = client
         .post(&start_url)
@@ -82,11 +82,14 @@ pub fn login() -> Result<()> {
 
     // Step 2: Open the browser (detached to avoid capturing browser output)
     println!("\n🔐 Opening browser for authentication...");
-    
+
     match open::that_detached(&start_data.verification_url) {
         Ok(_) => {
             println!("   Browser opened successfully.");
-            println!("   If the browser didn't open, visit: {}", start_data.verification_url);
+            println!(
+                "   If the browser didn't open, visit: {}",
+                start_data.verification_url
+            );
             println!();
         }
         Err(e) => {
@@ -99,15 +102,21 @@ pub fn login() -> Result<()> {
 
     // Step 3: Poll for authentication
     println!("⏳ Waiting for authentication in browser...");
-    
+
     if start_data.expires_in_seconds <= 0.0 {
         anyhow::bail!("Device token has already expired. Please try again.");
     }
-    
-    println!("   (This will timeout in {} seconds)", start_data.expires_in_seconds.round());
+
+    println!(
+        "   (This will timeout in {} seconds)",
+        start_data.expires_in_seconds.round()
+    );
     println!();
 
-    let check_url = format!("{}/api/cli/check-login/{}", base_url, start_data.device_token);
+    let check_url = format!(
+        "{}/api/cli/check-login/{}",
+        base_url, start_data.device_token
+    );
     let poll_interval = Duration::from_secs(5);
     let max_attempts = ((start_data.expires_in_seconds as u64) / poll_interval.as_secs()) + 2;
 
@@ -122,17 +131,35 @@ pub fn login() -> Result<()> {
             .with_context(|| "failed to check login status".to_string())?;
 
         let status_code = response.status();
+        
+        // Check for non-success status codes
+        if !status_code.is_success() {
+            let error_body = response.text().unwrap_or_else(|_| "<unable to read response>".to_string());
+            debug!("Non-success response: {} - {}", status_code, error_body);
+            anyhow::bail!(
+                "Login check failed: HTTP {} - {}",
+                status_code,
+                error_body
+            );
+        }
+        
         let check_data: CheckLoginResponse = response
             .json()
-            .context("failed to parse check login response")?;
+            .with_context(|| "failed to parse check login response")?;
 
-        debug!("Poll response: status={}, data={:?}", status_code, check_data);
+        debug!(
+            "Poll response: status={}, data={:?}",
+            status_code, check_data
+        );
 
         match check_data.status.as_str() {
             "authenticated" => {
                 // Success! Extract JWT and metadata
-                let token = check_data.token.context("no token in authenticated response")?;
-                
+                let token = check_data
+                    .token
+                    .context("no token in authenticated response")?;
+                let token_clone = token.clone();
+
                 // Calculate expiration timestamp
                 let expires_at = check_data.expires_in.map(|seconds| {
                     let now = SystemTime::now()
@@ -141,15 +168,15 @@ pub fn login() -> Result<()> {
                         .as_secs() as i64;
                     now + seconds
                 });
-                
+
                 // Convert UserData to UserInfo
                 let user = check_data.user.map(|u| UserInfo {
                     id: u.id,
                     email: u.email,
                     name: u.name,
                 });
-                
-                let auth = CliAuth { 
+
+                let auth = CliAuth {
                     token,
                     expires_at,
                     user: user.clone(),
@@ -162,8 +189,28 @@ pub fn login() -> Result<()> {
                 }
                 println!("   JWT saved to ~/.runbeam/auth.json");
                 if let Some(exp) = expires_at {
-                    println!("   Token expires in {} hours", (exp - SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64) / 3600);
+                    println!(
+                        "   Token expires in {} hours",
+                        (exp - SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs() as i64)
+                            / 3600
+                    );
                 }
+
+                // Verify the token using RS256
+                match crate::jwt::validate_jwt_token(&token_clone, &base_url) {
+                    Ok(jwt_claims) => {
+                        debug!("JWT verification successful: kid={:?}", jwt_claims.kid);
+                        println!("   Token verified using RS256 ✓");
+                    }
+                    Err(e) => {
+                        warn!("JWT verification failed: {}", e);
+                        println!("   ⚠  Token verification failed: {}", e);
+                    }
+                }
+
                 info!("User successfully authenticated");
                 return Ok(());
             }
@@ -217,12 +264,11 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     info!("Starting Harmony instance authorization...");
 
     // Load user authentication token
-    let auth = storage::load_auth()?
-        .context("Not logged in. Please run `runbeam login` first.")?;
+    let auth = storage::load_auth()?.context("Not logged in. Please run `runbeam login` first.")?;
 
     // Load the Harmony instance from storage
     let instances = storage::load_harmony_instances()?;
-    
+
     let instance = if let Some(id) = instance_id {
         instances.iter().find(|i| i.id == id)
     } else if let Some(label) = instance_label {
@@ -231,9 +277,14 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
         anyhow::bail!("Please specify a Harmony instance using --id or --label");
     };
 
-    let instance = instance.context("Harmony instance not found. Use `runbeam harmony:list` to see available instances.")?;
+    let instance = instance.context(
+        "Harmony instance not found. Use `runbeam harmony:list` to see available instances.",
+    )?;
 
-    println!("\n🔐 Authorizing Gateway (Harmony instance): {}", instance.label);
+    println!(
+        "\n🔐 Authorizing Gateway (Harmony instance): {}",
+        instance.label
+    );
     println!("   Instance ID: {}", instance.id);
     println!("   Address: {}:{}", instance.ip, instance.port);
     println!();
@@ -259,11 +310,7 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().unwrap_or_default();
-        anyhow::bail!(
-            "Harmony authorization failed: HTTP {} - {}",
-            status,
-            body
-        );
+        anyhow::bail!("Harmony authorization failed: HTTP {} - {}", status, body);
     }
 
     let result: serde_json::Value = response
@@ -282,4 +329,99 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
 
     info!("Harmony instance authorized: {}", instance.id);
     Ok(())
+}
+
+/// Verify the stored authentication token
+pub fn verify_token() -> Result<()> {
+    info!("Verifying stored authentication token...");
+
+    // Load authentication from storage
+    let auth = storage::load_auth()?
+        .context("No authentication token found. Please run `runbeam login` first.")?;
+
+    println!("\n🔐 Verifying JWT token...");
+    println!();
+
+    // Get API URL
+    let base_url = api_base_url()?;
+    debug!("Using API URL: {}", base_url);
+
+    // Validate the token
+    match crate::jwt::validate_jwt_token(&auth.token, &base_url) {
+        Ok(claims) => {
+            println!("✅ Token is valid!");
+            println!();
+            println!("Token Information:");
+            println!("  Issuer:       {}", claims.iss);
+            println!("  Subject:      {}", claims.sub);
+            if let Some(aud) = &claims.aud {
+                println!("  Audience:     {}", aud);
+            }
+            if let Some(kid) = &claims.kid {
+                println!("  Key ID:       {}", kid);
+            }
+            println!();
+
+            // Display user information if available
+            if let Some(user) = &claims.user {
+                println!("User Information:");
+                println!("  Name:         {}", user.name);
+                println!("  Email:        {}", user.email);
+                println!("  User ID:      {}", user.id);
+                println!();
+            }
+
+            // Display team information if available
+            if let Some(team) = &claims.team {
+                println!("Team Information:");
+                println!("  Name:         {}", team.name);
+                println!("  Team ID:      {}", team.id);
+                println!();
+            }
+
+            // Display expiration information
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64;
+            let time_remaining = claims.exp - now;
+
+            if time_remaining > 0 {
+                let hours = time_remaining / 3600;
+                let minutes = (time_remaining % 3600) / 60;
+                println!("Expiration:");
+                println!("  Expires at:   {} (Unix timestamp)", claims.exp);
+                if hours > 24 {
+                    println!("  Time left:    {} days, {} hours", hours / 24, hours % 24);
+                } else if hours > 0 {
+                    println!("  Time left:    {} hours, {} minutes", hours, minutes);
+                } else {
+                    println!("  Time left:    {} minutes", minutes);
+                }
+            } else {
+                println!("⚠️  Warning: Token has expired!");
+                println!("  Expired at:   {} (Unix timestamp)", claims.exp);
+                println!();
+                println!("Please run `runbeam login` to get a new token.");
+            }
+
+            info!("Token verification successful");
+            Ok(())
+        }
+        Err(e) => {
+            println!("❌ Token verification failed!");
+            println!();
+            println!("Error: {}", e);
+            println!();
+            println!("This usually means:");
+            println!("  • The token has expired");
+            println!("  • The token signature is invalid");
+            println!("  • The API URL has changed");
+            println!();
+            println!("Please run `runbeam login` to get a new token.");
+
+            warn!("Token verification failed: {}", e);
+            anyhow::bail!("Token verification failed")
+        }
+    }
 }

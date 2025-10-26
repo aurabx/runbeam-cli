@@ -31,6 +31,9 @@ pub enum Command {
     /// Log out and clear stored authentication
     Logout,
 
+    /// Verify the stored authentication token
+    Verify,
+
     /// Add a new Harmony instance via the management API
     #[command(name = "harmony:add")]
     HarmonyAdd {

@@ -1,5 +1,6 @@
 mod cli;
 mod commands;
+mod jwt;
 mod storage;
 
 use anyhow::Result;
@@ -45,6 +46,9 @@ fn main() -> Result<()> {
         }
         Some(cli::Command::Logout) => {
             auth::logout()?;
+        }
+        Some(cli::Command::Verify) => {
+            auth::verify_token()?;
         }
         Some(cli::Command::HarmonyAdd {
             ip,

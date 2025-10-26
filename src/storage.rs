@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use tracing::{debug, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct HarmonyInstance {
@@ -233,4 +234,43 @@ pub fn clear_auth() -> Result<bool> {
     } else {
         Ok(false)
     }
+}
+
+/// Load authentication and verify the JWT token
+///
+/// This function loads the stored auth and validates the JWT token using RS256.
+/// If verification fails, it logs a warning but still returns the auth (graceful degradation).
+///
+/// # Returns
+///
+/// Returns `Ok(Some(auth))` if authentication exists (regardless of verification status),
+/// or `Ok(None)` if no authentication is stored.
+#[allow(dead_code)]
+pub fn load_and_verify_auth() -> Result<Option<CliAuth>> {
+    let auth = load_auth()?;
+
+    if let Some(ref auth) = auth {
+        debug!("Verifying stored JWT token...");
+
+        // Get API URL for verification
+        let api_url = crate::commands::config::get_api_url()?;
+
+        // Attempt to verify the token
+        match crate::jwt::validate_jwt_token(&auth.token, &api_url) {
+            Ok(claims) => {
+                debug!(
+                    "Token verification successful: sub={}, exp={}",
+                    claims.sub, claims.exp
+                );
+            }
+            Err(e) => {
+                warn!("Token verification failed: {}", e);
+                warn!("Token may be expired or invalid. Consider running `runbeam login` again.");
+                // Note: We still return the auth to allow commands to proceed.
+                // Individual commands can choose to enforce verification if needed.
+            }
+        }
+    }
+
+    Ok(auth)
 }

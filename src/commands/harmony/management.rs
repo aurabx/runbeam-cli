@@ -228,7 +228,7 @@ pub fn routes(id: Option<&str>, label: Option<&str>, json: bool) -> Result<()> {
     }
 
     let json_value: Value = resp.json().context("parsing JSON response")?;
-    
+
     if json {
         println!("{}", serde_json::to_string_pretty(&json_value)?);
     } else {
