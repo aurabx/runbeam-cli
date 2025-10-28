@@ -1269,9 +1269,9 @@ dependencies = [
 
 [[package]]
 name = "runbeam-sdk"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3116e7789f4fae73436889841a168155a7a0448ca356ae1707ec6f7f3019ebc1"
+checksum = "f49888000e1b6f298cfcb874c8fd00ea827188066c31bdb3960b4836971f58d3"
 dependencies = [
  "chrono",
  "jsonwebtoken",

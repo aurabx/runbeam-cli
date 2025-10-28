@@ -38,7 +38,7 @@ open = "5"
 # Async runtime for SDK integration
 tokio = { version = "1", features = ["rt", "macros"] }
 # Runbeam SDK for API client and JWT validation
-runbeam-sdk = "0.1.0"
+runbeam-sdk = "0.2.0"
 
 [profile.release]
 lto = "thin"
