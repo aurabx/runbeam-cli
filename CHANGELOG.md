@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-10-28
+
+### Changed
+- **SDK Integration**: Migrated JWT verification and authentication logic to `runbeam-sdk` v0.2.0
+  - Removed 441 lines of duplicate JWT verification code from CLI
+  - Authentication now uses SDK's `AuthManager` for token management
+  - JWT verification now handled by SDK's `verify_token()` function
+  - Simplified codebase maintenance by centralizing auth logic in SDK
+- **Dependencies**: Updated to use `runbeam-sdk = "0.2.0"` with async runtime support
+  - Added `tokio` runtime for SDK integration
+  - Removed direct dependencies on `jsonwebtoken`, `base64`, and `url` (now via SDK)
+
+### Removed
+- Local JWT verification module (`src/jwt.rs`) - functionality moved to SDK
+- Direct JWKS fetching and caching logic - now handled by SDK
+
 ## [0.3.0] - 2025-10-26
 
 ### Added
@@ -68,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Harmony commands (`harmony:add`, `harmony:list`, `harmony:remove`)
 - Harmony management API integration
 
+[0.4.0]: https://github.com/aurabx/runbeam-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/aurabx/runbeam-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/aurabx/runbeam-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/aurabx/runbeam-cli/releases/tag/v0.1.0
