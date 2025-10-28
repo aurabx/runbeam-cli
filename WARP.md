@@ -22,10 +22,23 @@ cargo clippy -- -D warnings   # Lint with warnings as errors
 
 ### Tests
 ```sh
-cargo test                     # Run all tests (none currently)
-cargo test <pattern>           # Run specific tests
+cargo test                     # Run all tests
+cargo test <pattern>           # Run specific tests by name
+cargo test --lib               # Run library/unit tests only
+cargo test --test '*'          # Run integration tests only
+cargo test -- --nocapture      # Show stdout/stderr from tests
 ```
-Note: No tests exist yet. The `/samples` directory is intended for future test files.
+
+**Test Organization:**
+- **Unit tests**: `src/storage_tests.rs` - Tests for storage module (serialization, ID generation, path handling)
+- **CLI parsing tests**: `tests/cli_parsing_test.rs` - Tests for command-line argument parsing with clap
+- **Integration tests**: `tests/integration_test.rs` - End-to-end CLI invocation tests using assert_cmd
+- **Routes table test**: `tests/routes_table_test.rs` - JSON structure validation for harmony routes
+
+**Test Dependencies:**
+- `tempfile` - For creating temporary directories in tests
+- `assert_cmd` - For testing CLI binary execution
+- `predicates` - For assertion predicates in integration tests
 
 ### Packaging
 ```sh
