@@ -6,6 +6,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use tracing::{debug, warn};
+use keyring::Entry;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct HarmonyInstance {
@@ -271,6 +272,118 @@ pub fn load_and_verify_auth() -> Result<Option<CliAuth>> {
     }
 
     Ok(auth)
+}
+
+// ============================================================================
+// Harmony Encryption Key Storage (Keyring)
+// ============================================================================
+
+const KEYRING_SERVICE: &str = "runbeam-harmony";
+
+/// Get the keyring entry for a Harmony instance's encryption key
+fn get_encryption_key_entry(instance_id: &str) -> Result<Entry> {
+    let account = format!("{}-encryption-key", instance_id);
+    Entry::new(KEYRING_SERVICE, &account)
+        .with_context(|| format!("Failed to create keyring entry for instance: {}", instance_id))
+}
+
+/// Save an encryption key for a Harmony instance to the OS keyring
+///
+/// The key is stored securely in the OS keyring (macOS Keychain, Linux Secret Service,
+/// Windows Credential Manager) and can be used to encrypt tokens for the Harmony instance.
+///
+/// # Arguments
+///
+/// * `instance_id` - The Harmony instance ID
+/// * `encryption_key` - The base64-encoded encryption key to store
+///
+/// # Returns
+///
+/// Returns `Ok(())` if the key was saved successfully
+pub fn save_encryption_key(instance_id: &str, encryption_key: &str) -> Result<()> {
+    debug!("Saving encryption key for Harmony instance: {}", instance_id);
+    
+    let entry = get_encryption_key_entry(instance_id)?;
+    entry
+        .set_password(encryption_key)
+        .with_context(|| format!("Failed to save encryption key for instance: {}", instance_id))?;
+    
+    debug!("Encryption key saved successfully");
+    Ok(())
+}
+
+/// Load an encryption key for a Harmony instance from the OS keyring
+///
+/// # Arguments
+///
+/// * `instance_id` - The Harmony instance ID
+///
+/// # Returns
+///
+/// Returns `Ok(Some(key))` if the key exists, `Ok(None)` if not found
+pub fn load_encryption_key(instance_id: &str) -> Result<Option<String>> {
+    debug!("Loading encryption key for Harmony instance: {}", instance_id);
+    
+    let entry = get_encryption_key_entry(instance_id)?;
+    
+    match entry.get_password() {
+        Ok(key) => {
+            debug!("Encryption key loaded successfully");
+            Ok(Some(key))
+        }
+        Err(keyring::Error::NoEntry) => {
+            debug!("No encryption key found for instance");
+            Ok(None)
+        }
+        Err(e) => {
+            Err(anyhow::anyhow!("Failed to load encryption key: {}", e))
+        }
+    }
+}
+
+/// Delete an encryption key for a Harmony instance from the OS keyring
+///
+/// # Arguments
+///
+/// * `instance_id` - The Harmony instance ID
+///
+/// # Returns
+///
+/// Returns `Ok(true)` if the key was deleted, `Ok(false)` if it didn't exist
+pub fn delete_encryption_key(instance_id: &str) -> Result<bool> {
+    debug!("Deleting encryption key for Harmony instance: {}", instance_id);
+    
+    let entry = get_encryption_key_entry(instance_id)?;
+    
+    match entry.delete_credential() {
+        Ok(_) => {
+            debug!("Encryption key deleted successfully");
+            Ok(true)
+        }
+        Err(keyring::Error::NoEntry) => {
+            debug!("No encryption key found to delete");
+            Ok(false)
+        }
+        Err(e) => {
+            Err(anyhow::anyhow!("Failed to delete encryption key: {}", e))
+        }
+    }
+}
+
+/// Check if an encryption key exists for a Harmony instance
+///
+/// # Arguments
+///
+/// * `instance_id` - The Harmony instance ID
+///
+/// # Returns
+///
+/// Returns `true` if an encryption key exists, `false` otherwise
+pub fn has_encryption_key(instance_id: &str) -> bool {
+    match load_encryption_key(instance_id) {
+        Ok(Some(_)) => true,
+        _ => false,
+    }
 }
 
 #[cfg(test)]

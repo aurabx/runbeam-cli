@@ -49,6 +49,9 @@ pub enum Command {
         /// Path prefix for the management API (e.g. "admin")
         #[arg(short = 'x', long = "path-prefix", default_value = "admin")]
         path_prefix: String,
+        /// Base64-encoded encryption key for token storage (optional)
+        #[arg(short = 'k', long = "key")]
+        encryption_key: Option<String>,
     },
 
     /// List registered Harmony instances
@@ -117,6 +120,33 @@ pub enum Command {
         /// Select instance by label
         #[arg(short = 'l', long = "label", conflicts_with = "id")]
         label: Option<String>,
+    },
+
+    /// Set or update the encryption key for a Harmony instance
+    #[command(name = "harmony:set-key")]
+    HarmonySetKey {
+        /// Harmony instance ID
+        #[arg(long = "id")]
+        id: String,
+        /// Base64-encoded encryption key
+        #[arg(short = 'k', long = "key")]
+        encryption_key: String,
+    },
+
+    /// Show the encryption key for a Harmony instance
+    #[command(name = "harmony:show-key")]
+    HarmonyShowKey {
+        /// Harmony instance ID
+        #[arg(long = "id")]
+        id: String,
+    },
+
+    /// Delete the encryption key for a Harmony instance
+    #[command(name = "harmony:delete-key")]
+    HarmonyDeleteKey {
+        /// Harmony instance ID
+        #[arg(long = "id")]
+        id: String,
     },
 
     /// Test browser opening (development only)

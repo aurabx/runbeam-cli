@@ -54,8 +54,9 @@ fn main() -> Result<()> {
             port,
             label,
             path_prefix,
+            encryption_key,
         }) => {
-            harmony::harmony::harmony_add(&ip, port, label.as_deref(), &path_prefix)?;
+            harmony::harmony::harmony_add(&ip, port, label.as_deref(), &path_prefix, encryption_key.as_deref())?;
         }
         Some(cli::Command::HarmonyList) => {
             harmony::harmony::harmony_list()?;
@@ -79,6 +80,15 @@ fn main() -> Result<()> {
         }
         Some(cli::Command::HarmonyAuthorize { id, label }) => {
             auth::authorize_harmony(id.as_deref(), label.as_deref())?;
+        }
+        Some(cli::Command::HarmonySetKey { id, encryption_key }) => {
+            harmony::harmony::harmony_set_key(&id, &encryption_key)?;
+        }
+        Some(cli::Command::HarmonyShowKey { id }) => {
+            harmony::harmony::harmony_show_key(&id)?;
+        }
+        Some(cli::Command::HarmonyDeleteKey { id }) => {
+            harmony::harmony::harmony_delete_key(&id)?;
         }
         Some(cli::Command::TestBrowser) => {
             println!("Testing browser opening...");

@@ -37,12 +37,22 @@ fn api_base_url() -> Result<String> {
 pub fn login() -> Result<()> {
     info!("Starting CLI login process...");
 
-    // Check if already logged in
-    if let Some(_existing_auth) = storage::load_auth()? {
-        println!("✓ Already logged in.");
-        println!("  Run `runbeam logout` first if you want to login with a different account.");
-        debug!("Existing token found, skipping login");
-        return Ok(());
+    // Check if already logged in with a valid token
+    if let Some(existing_auth) = storage::load_auth()? {
+        // Verify the token is still valid
+        let validation_result = tokio::runtime::Runtime::new()
+            .expect("Failed to create Tokio runtime")
+            .block_on(sdk_validate_jwt(&existing_auth.token, 24));
+        
+        if validation_result.is_ok() {
+            println!("✓ Already logged in with a valid token.");
+            println!("  Run `runbeam logout` first if you want to login with a different account.");
+            debug!("Valid token found, skipping login");
+            return Ok(());
+        } else {
+            println!("ℹ️  Existing token is invalid or expired. Logging in again...");
+            debug!("Invalid/expired token found, proceeding with login");
+        }
     }
 
     // Step 1: Start the login process
@@ -289,8 +299,11 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     // Create SDK client and authorize gateway
     let client = RunbeamClient::new(api_url);
 
-    let auth_response = tokio::runtime::Runtime::new()
-        .expect("Failed to create Tokio runtime")
+    // Create Tokio runtime for async operations
+    let runtime = tokio::runtime::Runtime::new()
+        .expect("Failed to create Tokio runtime");
+    
+    let auth_response = runtime
         .block_on(client.authorize_gateway(
             &auth.token,
             &instance.id,
@@ -299,7 +312,7 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
         ))
         .context("Failed to authorize gateway with Runbeam Cloud")?;
 
-    println!("✅ Gateway authorized successfully!");
+    println!("✅ Gateway authorized with Runbeam Cloud!");
     println!();
     println!(
         "   Gateway: {} ({})",
@@ -325,6 +338,89 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     println!();
 
     info!("Gateway authorized: {}", auth_response.gateway.id);
+
+    // Load encryption key from keyring if available
+    let encryption_key = storage::load_encryption_key(&instance.id)
+        .ok()
+        .flatten();
+    
+    if encryption_key.is_some() {
+        println!("\n🔐 Using stored encryption key for token storage");
+    } else {
+        println!("\nℹ️  No encryption key found. Harmony will generate one automatically.");
+        println!("   To set a specific key: runbeam harmony:set-key --id {}", instance.id);
+    }
+
+    // Send machine token to Harmony proxy instance
+    println!("\n📡 Sending token to Harmony proxy at {}:{}...", instance.ip, instance.port);
+    
+    let harmony_url = format!(
+        "http://{}:{}/{}/token",
+        instance.ip, instance.port, instance.path_prefix
+    );
+    debug!("Posting token to: {}", harmony_url);
+
+    let mut token_payload = serde_json::json!({
+        "machine_token": auth_response.machine_token,
+        "expires_at": auth_response.expires_at,
+        "gateway_id": auth_response.gateway.id,
+        "gateway_code": auth_response.gateway.code,
+        "abilities": auth_response.abilities,
+    });
+    
+    // Add encryption key if available
+    if let Some(key) = encryption_key {
+        if let Some(obj) = token_payload.as_object_mut() {
+            obj.insert("encryption_key".to_string(), serde_json::json!(key));
+        }
+    }
+
+    let http_client = reqwest::Client::new();
+    let post_result: Result<(reqwest::StatusCode, Option<String>), reqwest::Error> = runtime.block_on(async {
+        let response = http_client
+            .post(&harmony_url)
+            .json(&token_payload)
+            .timeout(std::time::Duration::from_secs(5))
+            .send()
+            .await?;
+        
+        let status = response.status();
+        if status.is_success() {
+            Ok((status, None))
+        } else {
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            Ok((status, Some(error_text)))
+        }
+    });
+
+    match post_result {
+        Ok((status, error_text)) => {
+            if status.is_success() {
+                println!("✅ Token saved to Harmony proxy successfully!");
+                println!();
+                println!("🎉 Authorization complete! Harmony is ready to use.");
+            } else {
+                println!("⚠️  Failed to save token to Harmony proxy (HTTP {}):", status);
+                if let Some(text) = error_text {
+                    println!("   {}", text);
+                }
+                println!();
+                println!("The gateway is authorized with Runbeam Cloud, but you'll need to");
+                println!("manually configure the token in Harmony or restart the authorization.");
+            }
+        }
+        Err(e) => {
+            println!("⚠️  Could not connect to Harmony proxy:");
+            println!("   {}", e);
+            println!();
+            println!("The gateway is authorized with Runbeam Cloud, but the token could not");
+            println!("be delivered to the Harmony instance. Please ensure Harmony is running at");
+            println!("{}:{} and try again, or manually configure the token.", instance.ip, instance.port);
+        }
+    }
+    println!();
+
     Ok(())
 }
 

@@ -1353,6 +1353,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "directories",
+ "keyring",
  "open",
  "predicates",
  "reqwest",
@@ -1368,9 +1369,9 @@ dependencies = [
 
 [[package]]
 name = "runbeam-sdk"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f49888000e1b6f298cfcb874c8fd00ea827188066c31bdb3960b4836971f58d3"
+checksum = "3cdc27813e91d5a69ddeab07c57f271bd2abbe8d311ac6ad95debe3ed4dfb374"
 dependencies = [
  "chrono",
  "jsonwebtoken",

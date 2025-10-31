@@ -77,6 +77,9 @@ runbeam verify
 # Add a Harmony instance
 runbeam harmony:add -i 127.0.0.1 -p 8081 -x admin -l my-label
 
+# Add with a custom encryption key (optional)
+runbeam harmony:add -i 127.0.0.1 -p 8081 -l production --key "AGE-SECRET-KEY-1ABC..."
+
 # Authorize the Harmony instance to communicate with Runbeam Cloud
 runbeam harmony:authorize -l my-label
 
@@ -148,17 +151,74 @@ runbeam harmony:authorize --id 1a2b3c4d
 
 **Authorization Flow:**
 1. CLI loads your user authentication token
-2. CLI calls the Harmony management API with your token
-3. Harmony validates the token and contacts Runbeam Cloud
+2. CLI retrieves the encryption key from secure OS keyring (if configured)
+3. CLI calls the Runbeam Cloud API to authorize the gateway
 4. Runbeam Cloud issues a machine-scoped token (30-day expiry)
-5. Harmony stores the machine token locally
-6. Harmony can now make authenticated API calls to Runbeam Cloud
+5. CLI sends the token and encryption key to Harmony
+6. Harmony stores the machine token encrypted with the provided key
+7. Harmony can now make authenticated API calls to Runbeam Cloud
 
 **Security Model:**
 - User tokens are short-lived (used only for authorization)
-- Machine tokens are scoped to specific Harmony instances
+- Machine tokens are encrypted at rest using age X25519 encryption
+- Each Harmony instance can have its own encryption key
+- Encryption keys are stored securely in OS keyring (macOS Keychain, Linux Secret Service, Windows Credential Manager)
 - You can revoke a Harmony instance's access independently
 - Tokens can be renewed before expiry
+
+## Encryption Key Management
+
+The CLI can manage encryption keys for Harmony instances, providing control over how machine tokens are encrypted:
+
+### Setting Encryption Keys
+
+```sh
+# Set key during instance creation
+runbeam harmony:add -i 192.168.1.100 -p 9090 -l production --key "AGE-SECRET-KEY-1ABC..."
+
+# Set or update key for existing instance
+runbeam harmony:set-key --id abc123de --key "AGE-SECRET-KEY-1ABC..."
+```
+
+### Viewing Encryption Keys
+
+```sh
+# Display the encryption key for backup/migration
+runbeam harmony:show-key --id abc123de
+```
+
+⚠️ **Warning**: The encryption key is sensitive information. Store it securely (password manager, secrets vault).
+
+### Deleting Encryption Keys
+
+```sh
+# Remove encryption key from keyring
+runbeam harmony:delete-key --id abc123de
+```
+
+After deleting a key, Harmony will automatically generate a new one on next authorization.
+
+### Key Storage
+
+Encryption keys are stored in your OS keyring:
+- **macOS**: Keychain
+- **Linux**: Secret Service API (freedesktop.org)
+- **Windows**: Credential Manager
+
+Keys are associated with Harmony instance IDs and automatically used during authorization.
+
+### When to Use Custom Keys
+
+**Use custom encryption keys when:**
+- Migrating Harmony instances between machines
+- Implementing key rotation policies
+- Meeting compliance requirements for key management
+- Running multiple Harmony instances with consistent encryption
+
+**Use auto-generated keys (default) when:**
+- Running a single local Harmony instance
+- No specific compliance requirements
+- Simplicity is preferred
 
 ## Data Directory
 
