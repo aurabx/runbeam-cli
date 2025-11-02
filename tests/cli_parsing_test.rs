@@ -38,6 +38,7 @@ fn test_parse_harmony_add_defaults() {
             port,
             label,
             path_prefix,
+            ..
         }) => {
             assert_eq!(ip, "127.0.0.1");
             assert_eq!(port, 8081);
@@ -68,6 +69,7 @@ fn test_parse_harmony_add_custom() {
             port,
             label,
             path_prefix,
+            ..
         }) => {
             assert_eq!(ip, "192.168.1.100");
             assert_eq!(port, 9000);

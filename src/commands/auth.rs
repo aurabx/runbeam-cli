@@ -339,18 +339,6 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
 
     info!("Gateway authorized: {}", auth_response.gateway.id);
 
-    // Load encryption key from keyring if available
-    let encryption_key = storage::load_encryption_key(&instance.id)
-        .ok()
-        .flatten();
-    
-    if encryption_key.is_some() {
-        println!("\n🔐 Using stored encryption key for token storage");
-    } else {
-        println!("\nℹ️  No encryption key found. Harmony will generate one automatically.");
-        println!("   To set a specific key: runbeam harmony:set-key --id {}", instance.id);
-    }
-
     // Send machine token to Harmony proxy instance
     println!("\n📡 Sending token to Harmony proxy at {}:{}...", instance.ip, instance.port);
     
@@ -360,20 +348,13 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     );
     debug!("Posting token to: {}", harmony_url);
 
-    let mut token_payload = serde_json::json!({
+    let token_payload = serde_json::json!({
         "machine_token": auth_response.machine_token,
         "expires_at": auth_response.expires_at,
         "gateway_id": auth_response.gateway.id,
         "gateway_code": auth_response.gateway.code,
         "abilities": auth_response.abilities,
     });
-    
-    // Add encryption key if available
-    if let Some(key) = encryption_key {
-        if let Some(obj) = token_payload.as_object_mut() {
-            obj.insert("encryption_key".to_string(), serde_json::json!(key));
-        }
-    }
 
     let http_client = reqwest::Client::new();
     let post_result: Result<(reqwest::StatusCode, Option<String>), reqwest::Error> = runtime.block_on(async {

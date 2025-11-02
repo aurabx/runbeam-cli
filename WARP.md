@@ -99,15 +99,27 @@ Configuration priority (highest to lowest):
 - Binary name: `runbeam` (configured in Cargo.toml `[[bin]]`)
 - Temporary files and packaging artifacts: `./tmp/` directory
 - Release build optimizations: LTO thin, panic=abort, opt-level="z"
-- Dependencies: clap (CLI), anyhow (errors), tracing + tracing-subscriber (logging), reqwest (HTTP), open (browser opening)
+- Dependencies:
+  - `clap` (CLI argument parsing)
+  - `anyhow` (error handling)
+  - `tracing` + `tracing-subscriber` (structured logging)
+  - `reqwest` (HTTP client)
+  - `open` (browser opening for OAuth)
+  - `runbeam-sdk` (API client and secure token storage)
 - Configuration: CLI configuration stored at `~/.runbeam/config.json`
   - API URL precedence: config file > `RUNBEAM_API_URL` environment variable > default (`http://runbeam.lndo.site`)
   - Managed via `runbeam config:set`, `config:get`, and `config:unset` commands
   - Example: `runbeam config:set api-url https://api.runbeam.com`
 - Authentication: Browser-based OAuth flow with device tokens (similar to Heroku/Fly.io)
-  - Token stored at `~/.runbeam/auth.json`
   - Uses configured API URL from config file, environment variable, or default
   - Polls server every 5 seconds with 10-minute timeout
+  - **Secure Token Storage** (v0.3.0+):
+    - User tokens stored securely via `runbeam-sdk` generic storage
+    - Primary: OS keyring (Keychain, Secret Service, Credential Manager)
+    - Fallback: Encrypted filesystem storage using ChaCha20-Poly1305 AEAD
+    - Automatic migration from legacy plaintext `~/.runbeam/auth.json` to secure storage
+    - Tokens stored at identifier: `runbeam/user_token.json` (keyring) or `~/.runbeam/user_token.json` (encrypted)
+  - Token verification: RS256 JWT validation with JWKS endpoint discovery
 - Harmony Authorization: Two-phase authentication model
   - Phase 1: User authenticates via `runbeam login` (short-lived token)
   - Phase 2: User authorizes Harmony instance via `runbeam harmony:authorize`
@@ -120,10 +132,87 @@ Configuration priority (highest to lowest):
 - Multi-platform builds: Linux (musl), macOS (aarch64), Windows (msvc)
 - Packages binaries into `./tmp/`, generates checksums, uploads to GitHub Release
 
+## Secure Storage Architecture
+
+### Overview
+
+The CLI uses the `runbeam-sdk` for secure token storage with automatic backend selection and encryption:
+
+**Storage Backend Selection:**
+1. First attempts OS keyring (Keychain/Secret Service/Credential Manager)
+2. Falls back to encrypted filesystem storage if keyring unavailable
+3. Encryption is transparent - no user configuration needed
+
+**Token Types:**
+- **User tokens**: Authentication tokens from `runbeam login` (stored as `runbeam/user_token.json`)
+- **Machine tokens**: Gateway authorization tokens (stored as `runbeam/machine_token.json`)
+
+### Security Features
+
+**OS Keyring Storage (Primary):**
+- macOS: Keychain
+- Linux: Secret Service API (freedesktop.org)
+- Windows: Credential Manager
+- No encryption needed (OS handles security)
+
+**Encrypted Filesystem Storage (Fallback):**
+- Algorithm: ChaCha20-Poly1305 AEAD
+- Key derivation: Argon2id with random salt
+- Encryption key stored in OS keyring at `runbeam/encryption_key`
+- Token files: `~/.runbeam/user_token.json`, `~/.runbeam/machine_token.json`
+
+### Migration from Legacy Storage
+
+The CLI automatically migrates legacy plaintext tokens on first run:
+
+**Migration Flow:**
+1. Detects legacy file: `~/.runbeam/auth.json` (plaintext)
+2. Loads token and user info from legacy file
+3. Saves token to secure storage using SDK generic functions
+4. Removes legacy plaintext file
+5. Future operations use secure storage only
+
+**Implementation:**
+```rust
+// src/storage.rs - automatic migration
+if legacy_path.exists() {
+    // Load from plaintext file
+    let legacy_token = load_legacy_token(&legacy_path)?;
+    
+    // Save to secure storage
+    save_token_generic(&secure_storage, &legacy_token, "user_token").await?;
+    
+    // Remove plaintext file
+    fs::remove_file(legacy_path)?;
+    info!("Migrated token to secure storage");
+}
+```
+
+### Storage Module
+
+The `src/storage.rs` module provides:
+
+**Token Operations:**
+- `save_user_token()` - Save user authentication token securely
+- `load_user_token()` - Load user token from secure storage
+- `clear_user_token()` - Remove user token from storage
+- Legacy migration handled automatically in `load_user_token()`
+
+**Backend Selection:**
+```rust
+fn create_storage() -> Box<dyn StorageBackend> {
+    match KeyringStorage::new("runbeam") {
+        keyring if keyring.is_available() => Box::new(keyring),
+        _ => Box::new(FilesystemStorage::new()),
+    }
+}
+```
+
 ## Project Conventions
 
 - CLI built in Rust with binary named `runbeam`
 - Use `./tmp/` for temporary files and packaging artifacts (not system `/tmp`)
 - Schema validation directories are configurable (can point to `../jmix` or custom paths)
-- Encryption (when implemented): AES-256-GCM with ephemeral public key, IV and auth tag base64-encoded
 - A `/samples` directory is intended for test files when test suite is added
+- **Security**: All tokens stored using SDK secure storage (keyring or encrypted filesystem)
+- **Legacy support**: Automatic migration from plaintext `~/.runbeam/auth.json` to secure storage

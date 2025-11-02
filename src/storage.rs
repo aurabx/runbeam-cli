@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use tracing::{debug, warn};
-use keyring::Entry;
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct HarmonyInstance {
@@ -195,36 +194,87 @@ pub fn remove_harmony_instance_by_id(id: &str) -> Result<bool> {
 // ============================================================================
 
 pub fn load_auth() -> Result<Option<CliAuth>> {
-    let path = auth_file_path()?;
-    if !path.exists() {
-        return Ok(None);
+    // Try secure storage first (via SDK)
+    let runtime = tokio::runtime::Runtime::new()?;
+
+    if let Ok(Some(user_token)) = runtime.block_on(runbeam_sdk::load_token::<runbeam_sdk::UserToken>(
+        "runbeam-cli",
+        "user_auth",
+    )) {
+        return Ok(Some(CliAuth {
+            token: user_token.token,
+            expires_at: user_token.expires_at,
+            user: user_token.user,
+        }));
     }
-    let data = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
-    let auth: CliAuth =
-        serde_json::from_str(&data).with_context(|| format!("parsing {}", path.display()))?;
-    Ok(Some(auth))
+
+    // Fall back to legacy plaintext file for migration
+    let legacy_path = auth_file_path()?;
+    if legacy_path.exists() {
+        let data = fs::read_to_string(&legacy_path)
+            .with_context(|| format!("reading {}", legacy_path.display()))?;
+        let auth: CliAuth = serde_json::from_str(&data)
+            .with_context(|| format!("parsing {}", legacy_path.display()))?;
+
+        // Migrate to secure storage
+        let user_token = runbeam_sdk::UserToken::new(
+            auth.token.clone(),
+            auth.expires_at,
+            auth.user.clone(),
+        );
+
+        if let Ok(()) = runtime.block_on(runbeam_sdk::save_token(
+            "runbeam-cli",
+            "user_auth",
+            &user_token,
+        )) {
+            // Remove legacy file after successful migration
+            fs::remove_file(&legacy_path).ok();
+            info!("Migrated user token from plaintext to secure storage");
+        } else {
+            warn!("Failed to migrate token to secure storage, keeping legacy file");
+        }
+
+        return Ok(Some(auth));
+    }
+
+    Ok(None)
 }
 
 pub fn save_auth(auth: &CliAuth) -> Result<()> {
-    let path = auth_file_path()?;
-    let tmp_path = tmp_path_for(&path);
-    let json = serde_json::to_string_pretty(auth)?;
-    // Write atomically: write temp, then rename
-    {
-        let mut f = fs::File::create(&tmp_path)
-            .with_context(|| format!("creating {}", tmp_path.display()))?;
-        f.write_all(json.as_bytes())?;
-        f.sync_all().ok();
+    let user_token = runbeam_sdk::UserToken::new(
+        auth.token.clone(),
+        auth.expires_at,
+        auth.user.clone(),
+    );
+
+    let runtime = tokio::runtime::Runtime::new()?;
+    runtime
+        .block_on(runbeam_sdk::save_token(
+            "runbeam-cli",
+            "user_auth",
+            &user_token,
+        ))
+        .map_err(|e| anyhow::anyhow!("Failed to save token to secure storage: {}", e))?;
+
+    // Remove legacy file if it exists (cleanup)
+    let legacy_path = auth_file_path()?;
+    if legacy_path.exists() {
+        fs::remove_file(&legacy_path).ok();
     }
-    fs::rename(&tmp_path, &path)
-        .with_context(|| format!("rename {} -> {}", tmp_path.display(), path.display()))?;
+
     Ok(())
 }
 
 pub fn clear_auth() -> Result<bool> {
-    let path = auth_file_path()?;
-    if path.exists() {
-        fs::remove_file(&path).with_context(|| format!("removing {}", path.display()))?;
+    let runtime = tokio::runtime::Runtime::new()?;
+    let _ = runtime.block_on(runbeam_sdk::clear_token("runbeam-cli", "user_auth"));
+
+    // Also remove legacy file if it exists (cleanup)
+    let legacy_path = auth_file_path()?;
+    if legacy_path.exists() {
+        fs::remove_file(&legacy_path)
+            .with_context(|| format!("removing {}", legacy_path.display()))?;
         Ok(true)
     } else {
         Ok(false)
@@ -274,117 +324,8 @@ pub fn load_and_verify_auth() -> Result<Option<CliAuth>> {
     Ok(auth)
 }
 
-// ============================================================================
-// Harmony Encryption Key Storage (Keyring)
-// ============================================================================
-
-const KEYRING_SERVICE: &str = "runbeam-harmony";
-
-/// Get the keyring entry for a Harmony instance's encryption key
-fn get_encryption_key_entry(instance_id: &str) -> Result<Entry> {
-    let account = format!("{}-encryption-key", instance_id);
-    Entry::new(KEYRING_SERVICE, &account)
-        .with_context(|| format!("Failed to create keyring entry for instance: {}", instance_id))
-}
-
-/// Save an encryption key for a Harmony instance to the OS keyring
-///
-/// The key is stored securely in the OS keyring (macOS Keychain, Linux Secret Service,
-/// Windows Credential Manager) and can be used to encrypt tokens for the Harmony instance.
-///
-/// # Arguments
-///
-/// * `instance_id` - The Harmony instance ID
-/// * `encryption_key` - The base64-encoded encryption key to store
-///
-/// # Returns
-///
-/// Returns `Ok(())` if the key was saved successfully
-pub fn save_encryption_key(instance_id: &str, encryption_key: &str) -> Result<()> {
-    debug!("Saving encryption key for Harmony instance: {}", instance_id);
-    
-    let entry = get_encryption_key_entry(instance_id)?;
-    entry
-        .set_password(encryption_key)
-        .with_context(|| format!("Failed to save encryption key for instance: {}", instance_id))?;
-    
-    debug!("Encryption key saved successfully");
-    Ok(())
-}
-
-/// Load an encryption key for a Harmony instance from the OS keyring
-///
-/// # Arguments
-///
-/// * `instance_id` - The Harmony instance ID
-///
-/// # Returns
-///
-/// Returns `Ok(Some(key))` if the key exists, `Ok(None)` if not found
-pub fn load_encryption_key(instance_id: &str) -> Result<Option<String>> {
-    debug!("Loading encryption key for Harmony instance: {}", instance_id);
-    
-    let entry = get_encryption_key_entry(instance_id)?;
-    
-    match entry.get_password() {
-        Ok(key) => {
-            debug!("Encryption key loaded successfully");
-            Ok(Some(key))
-        }
-        Err(keyring::Error::NoEntry) => {
-            debug!("No encryption key found for instance");
-            Ok(None)
-        }
-        Err(e) => {
-            Err(anyhow::anyhow!("Failed to load encryption key: {}", e))
-        }
-    }
-}
-
-/// Delete an encryption key for a Harmony instance from the OS keyring
-///
-/// # Arguments
-///
-/// * `instance_id` - The Harmony instance ID
-///
-/// # Returns
-///
-/// Returns `Ok(true)` if the key was deleted, `Ok(false)` if it didn't exist
-pub fn delete_encryption_key(instance_id: &str) -> Result<bool> {
-    debug!("Deleting encryption key for Harmony instance: {}", instance_id);
-    
-    let entry = get_encryption_key_entry(instance_id)?;
-    
-    match entry.delete_credential() {
-        Ok(_) => {
-            debug!("Encryption key deleted successfully");
-            Ok(true)
-        }
-        Err(keyring::Error::NoEntry) => {
-            debug!("No encryption key found to delete");
-            Ok(false)
-        }
-        Err(e) => {
-            Err(anyhow::anyhow!("Failed to delete encryption key: {}", e))
-        }
-    }
-}
-
-/// Check if an encryption key exists for a Harmony instance
-///
-/// # Arguments
-///
-/// * `instance_id` - The Harmony instance ID
-///
-/// # Returns
-///
-/// Returns `true` if an encryption key exists, `false` otherwise
-pub fn has_encryption_key(instance_id: &str) -> bool {
-    match load_encryption_key(instance_id) {
-        Ok(Some(_)) => true,
-        _ => false,
-    }
-}
+// Note: Encryption key management is now handled by the SDK's storage backends.
+// The SDK automatically manages encryption keys for secure token storage.
 
 #[cfg(test)]
 mod tests {

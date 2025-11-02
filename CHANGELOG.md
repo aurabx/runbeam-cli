@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2024-11-01
+
+### Added
+
+- **Secure User Token Storage**
+  - User authentication tokens now stored securely via `runbeam-sdk` v0.3.2
+  - Primary: OS keyring (Keychain/Secret Service/Credential Manager)
+  - Fallback: Encrypted filesystem storage with ChaCha20-Poly1305 AEAD
+  - Automatic encryption key generation and secure storage
+  - Token isolation from machine tokens
+
+- **Automatic Migration**
+  - Automatic migration from legacy plaintext `~/.runbeam/auth.json` to secure storage
+  - Migration happens transparently on first run after upgrade
+  - Legacy plaintext file removed after successful migration
+  - No user action required
+
+- **Enhanced Security**
+  - All user tokens encrypted at rest (except in OS keyring)
+  - Encryption keys stored securely in OS keyring, never on disk in plaintext
+  - Transparent encryption/decryption with no user configuration needed
+  - Per-token-type storage isolation (user tokens separate from machine tokens)
+
+### Changed
+
+- **Storage Module Refactoring**
+  - Refactored `src/storage.rs` to use SDK generic secure storage
+  - `save_user_token()`, `load_user_token()`, `clear_user_token()` use SDK functions
+  - Removed duplicate encryption key management code
+  - Storage now handled entirely by SDK
+
+- **Encryption Key Management (Deprecated)**
+  - Harmony encryption key commands now show deprecation messages
+  - `harmony:set-key`, `harmony:show-key`, `harmony:delete-key` deprecated
+  - SDK handles all encryption keys automatically
+  - User-facing encryption key management no longer needed
+
+- **Documentation**
+  - Updated README.md with secure storage information and migration notes
+  - Updated WARP.md with secure storage architecture
+  - Added migration guide for upgrading from v0.4.x
+  - Documented automatic token migration process
+  - Marked encryption key commands as deprecated
+
+- **Dependencies**
+  - Updated to `runbeam-sdk = "0.3.2"` with generic secure storage support
+  - Removed unused encryption-related dependencies from CLI
+
+### Security
+
+- **Improved Token Protection**
+  - User tokens no longer stored in plaintext JSON files
+  - Automatic encryption for filesystem fallback
+  - OS-native credential storage used when available
+  - Encryption keys managed securely by SDK
+
+### Backwards Compatibility
+
+- Automatic migration from legacy plaintext storage
+- No breaking changes to CLI commands
+- Existing workflows continue to work without modification
+- Legacy token files automatically cleaned up after migration
+
 ## [0.4.0] - 2025-10-28
 
 ### Changed
