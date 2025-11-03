@@ -46,6 +46,8 @@ keyring = { version = "3.6", features = ["sync-secret-service"] }
 tempfile = "3"
 assert_cmd = "2"
 predicates = "3"
+mockito = "1"           # For HTTP mocking
+serial_test = "3"       # For serializing tests that can't run in parallel
 
 [profile.release]
 lto = "thin"
