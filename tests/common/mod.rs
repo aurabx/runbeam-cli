@@ -311,18 +311,30 @@ mod tests {
     #[test]
     #[serial]
     fn test_test_env_restores_env_on_drop() {
-        let original_home = env::var("HOME").ok();
+        // Test with a custom environment variable to avoid interference
+        let test_var = "TEST_VAR_FOR_RESTORATION";
+        let original_value = "original_test_value";
+        
+        unsafe { env::set_var(test_var, original_value); }
+        
+        let captured_before = env::var(test_var).ok();
         
         {
-            let _env = TestEnv::new();
-            // HOME should be different inside this scope
+            let mut test_env = TestEnv::new();
+            // Modify the test variable
+            test_env.set_env(test_var, "modified_value");
+            assert_eq!(env::var(test_var).ok(), Some("modified_value".to_string()));
         }
         
-        // HOME should be restored after drop
-        assert_eq!(env::var("HOME").ok(), original_home);
+        // Variable should be restored after TestEnv is dropped
+        assert_eq!(env::var(test_var).ok(), captured_before, "Environment variable should be restored to original value after drop");
+        
+        // Cleanup
+        unsafe { env::remove_var(test_var); }
     }
 
     #[test]
+    #[serial]
     fn test_write_and_read_json_file() {
         let env = TestEnv::new();
         let data = serde_json::json!({"test": "value"});
