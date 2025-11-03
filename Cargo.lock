@@ -1956,7 +1956,6 @@ dependencies = [
  "assert_cmd",
  "clap",
  "directories",
- "keyring",
  "mockito",
  "open",
  "predicates",
@@ -1974,7 +1973,9 @@ dependencies = [
 
 [[package]]
 name = "runbeam-sdk"
-version = "0.3.2"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d99e9355cec210644b3e9355938efca32abc8e3571e196a62f758724edb9304d"
 dependencies = [
  "age",
  "base64 0.22.1",
