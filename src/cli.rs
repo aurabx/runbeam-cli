@@ -111,6 +111,17 @@ pub enum Command {
         json: bool,
     },
 
+    /// Reload the Harmony instance configuration
+    #[command(name = "harmony:reload")]
+    HarmonyReload {
+        /// Select instance by short ID
+        #[arg(long = "id", conflicts_with = "label")]
+        id: Option<String>,
+        /// Select instance by label
+        #[arg(short = 'l', long = "label", conflicts_with = "id")]
+        label: Option<String>,
+    },
+
     /// Authorize a Harmony instance to communicate with Runbeam Cloud
     #[command(name = "harmony:authorize")]
     HarmonyAuthorize {

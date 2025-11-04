@@ -195,6 +195,25 @@ runbeam harmony:routes -l my-label
 runbeam harmony:routes --id 1a2b3c4d --json
 ```
 
+### harmony:reload
+
+Trigger a reload of the Harmony instance configuration by calling `POST /api/reload`.
+
+This command directly calls the reload endpoint on the Harmony instance (bypasses the management API path prefix).
+
+Options:
+- `--id <ID>`: Select instance by short ID (conflicts with --label)
+- `-l, --label <LABEL>`: Select instance by label (conflicts with --id)
+
+Examples:
+```sh
+# Reload configuration by instance ID
+runbeam harmony:reload --id 1a2b3c4d
+
+# Reload configuration by label
+runbeam harmony:reload -l my-label
+```
+
 ### harmony:authorize
 
 Authorize a Harmony instance to communicate with Runbeam Cloud. This exchanges your user token for a machine-scoped token that the Harmony instance can use.

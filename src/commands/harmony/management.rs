@@ -241,3 +241,22 @@ pub fn routes(id: Option<&str>, label: Option<&str>, json: bool) -> Result<()> {
     }
     Ok(())
 }
+
+pub fn reload(id: Option<&str>, label: Option<&str>) -> Result<()> {
+    let inst = resolve_instance(id, label)?;
+    let url = format!("http://{}:{}/api/reload", inst.ip, inst.port);
+    let client = Client::new();
+    let resp = client
+        .post(&url)
+        .send()
+        .with_context(|| format!("POST {}", url))?;
+
+    if !resp.status().is_success() {
+        return Err(anyhow!("{} {}", resp.status(), url));
+    }
+
+    let json: Value = resp.json().context("parsing JSON response")?;
+    println!("✓ Reload triggered successfully");
+    render_json_table(&json);
+    Ok(())
+}

@@ -78,6 +78,9 @@ fn main() -> Result<()> {
         Some(cli::Command::HarmonyRoutes { id, label, json }) => {
             harmony::management::routes(id.as_deref(), label.as_deref(), json)?;
         }
+        Some(cli::Command::HarmonyReload { id, label }) => {
+            harmony::management::reload(id.as_deref(), label.as_deref())?;
+        }
         Some(cli::Command::HarmonyAuthorize { id, label }) => {
             auth::authorize_harmony(id.as_deref(), label.as_deref())?;
         }
