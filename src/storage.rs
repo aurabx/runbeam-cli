@@ -197,10 +197,9 @@ pub fn load_auth() -> Result<Option<CliAuth>> {
     // Try secure storage first (via SDK)
     let runtime = tokio::runtime::Runtime::new()?;
 
-    if let Ok(Some(user_token)) = runtime.block_on(runbeam_sdk::load_token::<runbeam_sdk::UserToken>(
-        "runbeam-cli",
-        "user_auth",
-    )) {
+    if let Ok(Some(user_token)) = runtime.block_on(
+        runbeam_sdk::load_token::<runbeam_sdk::UserToken>("runbeam-cli", "user_auth"),
+    ) {
         return Ok(Some(CliAuth {
             token: user_token.token,
             expires_at: user_token.expires_at,
@@ -217,11 +216,8 @@ pub fn load_auth() -> Result<Option<CliAuth>> {
             .with_context(|| format!("parsing {}", legacy_path.display()))?;
 
         // Migrate to secure storage
-        let user_token = runbeam_sdk::UserToken::new(
-            auth.token.clone(),
-            auth.expires_at,
-            auth.user.clone(),
-        );
+        let user_token =
+            runbeam_sdk::UserToken::new(auth.token.clone(), auth.expires_at, auth.user.clone());
 
         if let Ok(()) = runtime.block_on(runbeam_sdk::save_token(
             "runbeam-cli",
@@ -242,11 +238,8 @@ pub fn load_auth() -> Result<Option<CliAuth>> {
 }
 
 pub fn save_auth(auth: &CliAuth) -> Result<()> {
-    let user_token = runbeam_sdk::UserToken::new(
-        auth.token.clone(),
-        auth.expires_at,
-        auth.user.clone(),
-    );
+    let user_token =
+        runbeam_sdk::UserToken::new(auth.token.clone(), auth.expires_at, auth.user.clone());
 
     let runtime = tokio::runtime::Runtime::new()?;
     runtime
@@ -381,8 +374,7 @@ mod tests {
             "label": "test"
         }"#;
 
-        let instance: HarmonyInstance =
-            serde_json::from_str(json).expect("Failed to deserialize");
+        let instance: HarmonyInstance = serde_json::from_str(json).expect("Failed to deserialize");
         assert_eq!(instance.path_prefix, "admin");
     }
 

@@ -83,10 +83,7 @@ fn test_parse_harmony_add_custom() {
 #[test]
 fn test_parse_harmony_list() {
     let args = cli::Cli::parse_from(["runbeam", "harmony:list"]);
-    assert!(matches!(
-        args.command,
-        Some(cli::Command::HarmonyList)
-    ));
+    assert!(matches!(args.command, Some(cli::Command::HarmonyList)));
 }
 
 #[test]
@@ -318,10 +315,7 @@ fn test_parse_harmony_set_key() {
         "test-key-value",
     ]);
     match args.command {
-        Some(cli::Command::HarmonySetKey {
-            id,
-            encryption_key,
-        }) => {
+        Some(cli::Command::HarmonySetKey { id, encryption_key }) => {
             assert_eq!(id, "abc123");
             assert_eq!(encryption_key, "test-key-value");
         }
@@ -340,10 +334,7 @@ fn test_parse_harmony_set_key_short_flags() {
         "short-key",
     ]);
     match args.command {
-        Some(cli::Command::HarmonySetKey {
-            id,
-            encryption_key,
-        }) => {
+        Some(cli::Command::HarmonySetKey { id, encryption_key }) => {
             assert_eq!(id, "def456");
             assert_eq!(encryption_key, "short-key");
         }
@@ -366,7 +357,6 @@ fn test_parse_harmony_show_key() {
     }
 }
 
-
 #[test]
 fn test_parse_harmony_delete_key() {
     let args = cli::Cli::parse_from(["runbeam", "harmony:delete-key", "--id", "xyz789"]);
@@ -377,7 +367,6 @@ fn test_parse_harmony_delete_key() {
         _ => panic!("Expected HarmonyDeleteKey command"),
     }
 }
-
 
 #[test]
 fn test_parse_harmony_pipelines_with_id() {
@@ -488,10 +477,7 @@ fn test_parse_harmony_add_with_encryption_key() {
 fn test_parse_verbose_with_command() {
     let args = cli::Cli::parse_from(["runbeam", "-vv", "harmony:list"]);
     assert_eq!(args.verbose, 2);
-    assert!(matches!(
-        args.command,
-        Some(cli::Command::HarmonyList)
-    ));
+    assert!(matches!(args.command, Some(cli::Command::HarmonyList)));
 }
 
 #[test]
@@ -529,7 +515,7 @@ fn test_parse_command_with_long_flags() {
 #[test]
 fn test_parse_harmony_remove_with_all_options() {
     // Test that each removal method works independently
-    
+
     // By ID
     let args = cli::Cli::parse_from(["runbeam", "harmony:remove", "--id", "test-id"]);
     match args.command {

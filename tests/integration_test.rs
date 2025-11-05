@@ -4,9 +4,9 @@ use predicates::prelude::*;
 #[test]
 fn test_no_command_shows_hint() {
     let mut cmd = Command::cargo_bin("runbeam").unwrap();
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("use --help to see available commands"));
+    cmd.assert().success().stdout(predicate::str::contains(
+        "use --help to see available commands",
+    ));
 }
 
 #[test]
@@ -48,10 +48,7 @@ fn test_config_get_succeeds() {
 #[test]
 fn test_config_get_specific_key() {
     let mut cmd = Command::cargo_bin("runbeam").unwrap();
-    cmd.arg("config:get")
-        .arg("api-url")
-        .assert()
-        .success();
+    cmd.arg("config:get").arg("api-url").assert().success();
 }
 
 #[test]

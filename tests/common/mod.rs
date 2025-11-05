@@ -2,7 +2,6 @@
 ///
 /// This module provides shared functionality for test setup, mocking,
 /// and assertions to reduce code duplication across test files.
-
 use serde_json::Value;
 use std::env;
 use std::fs;
@@ -31,18 +30,23 @@ impl TestEnv {
     pub fn new() -> Self {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let data_dir = temp_dir.path().join(".runbeam");
-        
+
         fs::create_dir_all(&data_dir).expect("Failed to create data directory");
 
         // Store original environment variables
         let original_env = vec![
             ("HOME".to_string(), env::var("HOME").ok()),
-            ("RUNBEAM_API_URL".to_string(), env::var("RUNBEAM_API_URL").ok()),
+            (
+                "RUNBEAM_API_URL".to_string(),
+                env::var("RUNBEAM_API_URL").ok(),
+            ),
             ("RUST_LOG".to_string(), env::var("RUST_LOG").ok()),
         ];
 
         // Set HOME to temp directory for isolation
-        unsafe { env::set_var("HOME", temp_dir.path()); }
+        unsafe {
+            env::set_var("HOME", temp_dir.path());
+        }
 
         TestEnv {
             temp_dir,
@@ -66,9 +70,12 @@ impl TestEnv {
     pub fn set_env(&mut self, key: &str, value: &str) {
         // Store original value if not already stored
         if !self.original_env.iter().any(|(k, _)| k == key) {
-            self.original_env.push((key.to_string(), env::var(key).ok()));
+            self.original_env
+                .push((key.to_string(), env::var(key).ok()));
         }
-        unsafe { env::set_var(key, value); }
+        unsafe {
+            env::set_var(key, value);
+        }
     }
 
     /// Unset an environment variable for this test
@@ -76,9 +83,12 @@ impl TestEnv {
     pub fn unset_env(&mut self, key: &str) {
         // Store original value if not already stored
         if !self.original_env.iter().any(|(k, _)| k == key) {
-            self.original_env.push((key.to_string(), env::var(key).ok()));
+            self.original_env
+                .push((key.to_string(), env::var(key).ok()));
         }
-        unsafe { env::remove_var(key); }
+        unsafe {
+            env::remove_var(key);
+        }
     }
 
     /// Write a JSON file to the data directory
@@ -187,7 +197,7 @@ pub fn assert_table_output(output: &str, headers: &[&str]) {
             output
         );
     }
-    
+
     // Check for table separator (dashes)
     assert!(
         output.contains("---") || output.contains("-+-"),
@@ -208,7 +218,7 @@ pub fn assert_table_output(output: &str, headers: &[&str]) {
 /// Panics if any expected fields are missing
 pub fn assert_json_structure(json: &Value, expected_fields: &[&str]) {
     let obj = json.as_object().expect("JSON should be an object");
-    
+
     for field in expected_fields {
         assert!(
             obj.contains_key(*field),
@@ -232,10 +242,12 @@ pub fn assert_json_structure(json: &Value, expected_fields: &[&str]) {
 pub fn assert_json_array_structure(json_array: &Value, expected_fields: &[&str]) {
     let array = json_array.as_array().expect("JSON should be an array");
     assert!(!array.is_empty(), "JSON array should not be empty");
-    
+
     for (i, item) in array.iter().enumerate() {
-        let obj = item.as_object().expect(&format!("Array item {} should be an object", i));
-        
+        let obj = item
+            .as_object()
+            .expect(&format!("Array item {} should be an object", i));
+
         for field in expected_fields {
             assert!(
                 obj.contains_key(*field),
@@ -314,23 +326,31 @@ mod tests {
         // Test with a custom environment variable to avoid interference
         let test_var = "TEST_VAR_FOR_RESTORATION";
         let original_value = "original_test_value";
-        
-        unsafe { env::set_var(test_var, original_value); }
-        
+
+        unsafe {
+            env::set_var(test_var, original_value);
+        }
+
         let captured_before = env::var(test_var).ok();
-        
+
         {
             let mut test_env = TestEnv::new();
             // Modify the test variable
             test_env.set_env(test_var, "modified_value");
             assert_eq!(env::var(test_var).ok(), Some("modified_value".to_string()));
         }
-        
+
         // Variable should be restored after TestEnv is dropped
-        assert_eq!(env::var(test_var).ok(), captured_before, "Environment variable should be restored to original value after drop");
-        
+        assert_eq!(
+            env::var(test_var).ok(),
+            captured_before,
+            "Environment variable should be restored to original value after drop"
+        );
+
         // Cleanup
-        unsafe { env::remove_var(test_var); }
+        unsafe {
+            env::remove_var(test_var);
+        }
     }
 
     #[test]
@@ -338,17 +358,17 @@ mod tests {
     fn test_write_and_read_json_file() {
         let env = TestEnv::new();
         let data = serde_json::json!({"test": "value"});
-        
+
         env.write_json_file("test.json", &data);
         let read_data = env.read_json_file("test.json");
-        
+
         assert_eq!(data, read_data);
     }
 
     #[test]
     fn test_create_mock_harmony_instance() {
         let instance = create_mock_harmony_instance("abc123", "127.0.0.1", 8081, "test", "admin");
-        
+
         assert_eq!(instance["id"], "abc123");
         assert_eq!(instance["ip"], "127.0.0.1");
         assert_eq!(instance["port"], 8081);
@@ -359,7 +379,7 @@ mod tests {
     #[test]
     fn test_create_mock_harmony_instance_generates_id() {
         let instance = create_mock_harmony_instance("", "127.0.0.1", 8081, "test", "admin");
-        
+
         // Should generate an ID based on port
         assert!(!instance["id"].as_str().unwrap().is_empty());
     }
@@ -415,10 +435,10 @@ mod tests {
     fn test_mock_responses_have_valid_structure() {
         let routes = create_mock_routes_response();
         assert!(routes["routes"].is_array());
-        
+
         let pipelines = create_mock_pipelines_response();
         assert!(pipelines["pipelines"].is_array());
-        
+
         let info = create_mock_info_response();
         assert!(info["version"].is_string());
     }

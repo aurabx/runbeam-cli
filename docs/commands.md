@@ -218,13 +218,21 @@ runbeam harmony:reload -l my-label
 
 Authorize a Harmony instance to communicate with Runbeam Cloud. This exchanges your user token for a machine-scoped token that the Harmony instance can use.
 
-**Prerequisites**: You must be logged in (`runbeam login`) before authorizing a Harmony instance.
+**Prerequisites**: 
+- You must be logged in (`runbeam login`) before authorizing a Harmony instance
+- The Harmony instance must have `runbeam.enabled = true` in its configuration file (`config.toml`)
 
 Authorization flow:
 1. Uses your user authentication token from `runbeam login`
 2. Calls the Harmony management API with your token
 3. Harmony exchanges your token for a machine-scoped token (30-day expiry)
 4. Harmony stores the machine token for future API calls
+
+**Note**: If you receive a 403 Forbidden error, ensure that Runbeam Cloud integration is enabled in your Harmony configuration:
+```toml
+[runbeam]
+enabled = true
+```
 
 Options:
 - `--id <ID>`: Select instance by short ID (conflicts with --label)

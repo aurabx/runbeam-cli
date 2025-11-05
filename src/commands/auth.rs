@@ -28,6 +28,13 @@ struct CheckLoginResponse {
     message: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct HarmonyErrorResponse {
+    error: String,
+    message: String,
+}
+
 /// Get the API base URL from config, environment, or use default
 fn api_base_url() -> Result<String> {
     config::get_api_url()
@@ -43,7 +50,7 @@ pub fn login() -> Result<()> {
         let validation_result = tokio::runtime::Runtime::new()
             .expect("Failed to create Tokio runtime")
             .block_on(sdk_validate_jwt(&existing_auth.token, 24));
-        
+
         if validation_result.is_ok() {
             println!("✓ Already logged in with a valid token.");
             println!("  Run `runbeam logout` first if you want to login with a different account.");
@@ -300,9 +307,8 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     let client = RunbeamClient::new(api_url);
 
     // Create Tokio runtime for async operations
-    let runtime = tokio::runtime::Runtime::new()
-        .expect("Failed to create Tokio runtime");
-    
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+
     let auth_response = runtime
         .block_on(client.authorize_gateway(
             &auth.token,
@@ -340,8 +346,11 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     info!("Gateway authorized: {}", auth_response.gateway.id);
 
     // Send machine token to Harmony proxy instance
-    println!("\n📡 Sending token to Harmony proxy at {}:{}...", instance.ip, instance.port);
-    
+    println!(
+        "\n📡 Sending token to Harmony proxy at {}:{}...",
+        instance.ip, instance.port
+    );
+
     let harmony_url = format!(
         "http://{}:{}/{}/token",
         instance.ip, instance.port, instance.path_prefix
@@ -357,23 +366,26 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     });
 
     let http_client = reqwest::Client::new();
-    let post_result: Result<(reqwest::StatusCode, Option<String>), reqwest::Error> = runtime.block_on(async {
-        let response = http_client
-            .post(&harmony_url)
-            .json(&token_payload)
-            .timeout(std::time::Duration::from_secs(5))
-            .send()
-            .await?;
-        
-        let status = response.status();
-        if status.is_success() {
-            Ok((status, None))
-        } else {
-            let error_text = response.text().await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-            Ok((status, Some(error_text)))
-        }
-    });
+    let post_result: Result<(reqwest::StatusCode, Option<String>), reqwest::Error> = runtime
+        .block_on(async {
+            let response = http_client
+                .post(&harmony_url)
+                .json(&token_payload)
+                .timeout(std::time::Duration::from_secs(5))
+                .send()
+                .await?;
+
+            let status = response.status();
+            if status.is_success() {
+                Ok((status, None))
+            } else {
+                let error_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+                Ok((status, Some(error_text)))
+            }
+        });
 
     match post_result {
         Ok((status, error_text)) => {
@@ -381,8 +393,56 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
                 println!("✅ Token saved to Harmony proxy successfully!");
                 println!();
                 println!("🎉 Authorization complete! Harmony is ready to use.");
+            } else if status == reqwest::StatusCode::FORBIDDEN {
+                // Handle 403 Forbidden - check if it's the runbeam.enabled issue
+                let is_runbeam_disabled = if let Some(ref text) = error_text {
+                    // Try to parse as JSON error response
+                    if let Ok(error_response) = serde_json::from_str::<HarmonyErrorResponse>(text) {
+                        error_response
+                            .message
+                            .contains("Runbeam Cloud integration is disabled")
+                            || error_response.message.contains("runbeam.enabled")
+                    } else {
+                        // Fallback: check raw text
+                        text.contains("Runbeam Cloud integration is disabled")
+                            || text.contains("runbeam.enabled")
+                    }
+                } else {
+                    false
+                };
+
+                if is_runbeam_disabled {
+                    println!("⚠️  Harmony proxy rejected the authorization (HTTP 403):");
+                    println!("   Runbeam Cloud integration is disabled on the Harmony instance.");
+                    println!();
+                    println!("   To fix this:");
+                    println!("   1. Edit your Harmony configuration file (config.toml)");
+                    println!("   2. Set: [runbeam]\n      enabled = true");
+                    println!("   3. Restart Harmony and try again:");
+                    println!("      runbeam harmony:authorize --id {}", instance.id);
+                    println!();
+                    println!(
+                        "The gateway is authorized with Runbeam Cloud, but the token could not"
+                    );
+                    println!("be delivered to the Harmony instance.");
+                } else {
+                    // Generic 403 error
+                    println!("⚠️  Failed to save token to Harmony proxy (HTTP 403 Forbidden):");
+                    if let Some(text) = error_text {
+                        println!("   {}", text);
+                    }
+                    println!();
+                    println!("The gateway is authorized with Runbeam Cloud, but you'll need to");
+                    println!(
+                        "manually configure the token in Harmony or restart the authorization."
+                    );
+                }
             } else {
-                println!("⚠️  Failed to save token to Harmony proxy (HTTP {}):", status);
+                // Other non-success status codes
+                println!(
+                    "⚠️  Failed to save token to Harmony proxy (HTTP {}):",
+                    status
+                );
                 if let Some(text) = error_text {
                     println!("   {}", text);
                 }
@@ -397,7 +457,10 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
             println!();
             println!("The gateway is authorized with Runbeam Cloud, but the token could not");
             println!("be delivered to the Harmony instance. Please ensure Harmony is running at");
-            println!("{}:{} and try again, or manually configure the token.", instance.ip, instance.port);
+            println!(
+                "{}:{} and try again, or manually configure the token.",
+                instance.ip, instance.port
+            );
         }
     }
     println!();
@@ -494,5 +557,80 @@ pub fn verify_token() -> Result<()> {
             warn!("Token verification failed: {}", e);
             anyhow::bail!("Token verification failed")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_harmony_error_response_parsing() {
+        // Test parsing valid JSON error response
+        let json = r#"{"error":"Forbidden","message":"Runbeam Cloud integration is disabled. Set runbeam.enabled=true in configuration to use this endpoint."}"#;
+        let result: Result<HarmonyErrorResponse, _> = serde_json::from_str(json);
+        assert!(result.is_ok());
+
+        let error_response = result.unwrap();
+        assert_eq!(error_response.error, "Forbidden");
+        assert!(
+            error_response
+                .message
+                .contains("Runbeam Cloud integration is disabled")
+        );
+        assert!(error_response.message.contains("runbeam.enabled"));
+    }
+
+    #[test]
+    fn test_harmony_error_detection() {
+        // Test that we correctly detect the runbeam.enabled error
+        let json = r#"{"error":"Forbidden","message":"Runbeam Cloud integration is disabled. Set runbeam.enabled=true in configuration to use this endpoint."}"#;
+
+        if let Ok(error_response) = serde_json::from_str::<HarmonyErrorResponse>(json) {
+            let is_runbeam_disabled = error_response
+                .message
+                .contains("Runbeam Cloud integration is disabled")
+                || error_response.message.contains("runbeam.enabled");
+            assert!(is_runbeam_disabled);
+        } else {
+            panic!("Failed to parse error response");
+        }
+    }
+
+    #[test]
+    fn test_generic_403_error() {
+        // Test that generic 403 errors don't trigger the specific message
+        let json = r#"{"error":"Forbidden","message":"Access denied"}"#;
+
+        if let Ok(error_response) = serde_json::from_str::<HarmonyErrorResponse>(json) {
+            let is_runbeam_disabled = error_response
+                .message
+                .contains("Runbeam Cloud integration is disabled")
+                || error_response.message.contains("runbeam.enabled");
+            assert!(!is_runbeam_disabled);
+        }
+    }
+
+    #[test]
+    fn test_malformed_json_fallback() {
+        // Test that malformed JSON doesn't crash
+        let malformed = "This is not JSON";
+        let result: Result<HarmonyErrorResponse, _> = serde_json::from_str(malformed);
+        assert!(result.is_err());
+
+        // Test fallback to raw text detection
+        let is_runbeam_disabled = malformed.contains("Runbeam Cloud integration is disabled")
+            || malformed.contains("runbeam.enabled");
+        assert!(!is_runbeam_disabled);
+    }
+
+    #[test]
+    fn test_raw_text_detection() {
+        // Test that we can detect the error in raw text (non-JSON)
+        let raw_text =
+            "Runbeam Cloud integration is disabled. Set runbeam.enabled=true in configuration.";
+        let is_runbeam_disabled = raw_text.contains("Runbeam Cloud integration is disabled")
+            || raw_text.contains("runbeam.enabled");
+        assert!(is_runbeam_disabled);
     }
 }

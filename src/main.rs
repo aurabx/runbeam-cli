@@ -56,7 +56,13 @@ fn main() -> Result<()> {
             path_prefix,
             encryption_key,
         }) => {
-            harmony::harmony::harmony_add(&ip, port, label.as_deref(), &path_prefix, encryption_key.as_deref())?;
+            harmony::harmony::harmony_add(
+                &ip,
+                port,
+                label.as_deref(),
+                &path_prefix,
+                encryption_key.as_deref(),
+            )?;
         }
         Some(cli::Command::HarmonyList) => {
             harmony::harmony::harmony_list()?;
