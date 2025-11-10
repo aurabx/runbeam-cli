@@ -28,6 +28,7 @@ pub fn harmony_add(
         port,
         label: final_label.clone(),
         path_prefix: path_prefix.to_string(),
+        gateway_id: None,  // Will be set after authorization
     };
     crate::storage::add_harmony_instance(instance.clone())?;
 
@@ -60,6 +61,7 @@ pub fn harmony_list() -> anyhow::Result<()> {
 
     // Compute column widths
     let mut w_id = "ID".len();
+    let mut w_gateway_id = "GATEWAY_ID".len();
     let mut w_label = "LABEL".len();
     let mut w_ip = "IP".len();
     let mut w_port = "PORT".len();
@@ -67,6 +69,10 @@ pub fn harmony_list() -> anyhow::Result<()> {
     for inst in &list {
         if inst.id.len() > w_id {
             w_id = inst.id.len();
+        }
+        let gw_len = inst.gateway_id.as_ref().map(|s| s.len()).unwrap_or(0);
+        if gw_len > w_gateway_id {
+            w_gateway_id = gw_len;
         }
         if inst.label.len() > w_label {
             w_label = inst.label.len();
@@ -85,13 +91,15 @@ pub fn harmony_list() -> anyhow::Result<()> {
 
     // Header
     println!(
-        "{id:<id_w$} | {label:<label_w$} | {ip:<ip_w$} | {port:<port_w$} | {prefix:<prefix_w$}",
+        "{id:<id_w$} | {gateway_id:<gw_w$} | {label:<label_w$} | {ip:<ip_w$} | {port:<port_w$} | {prefix:<prefix_w$}",
         id = "ID",
+        gateway_id = "GATEWAY_ID",
         label = "LABEL",
         ip = "IP",
         port = "PORT",
         prefix = "PREFIX",
         id_w = w_id,
+        gw_w = w_gateway_id,
         label_w = w_label,
         ip_w = w_ip,
         port_w = w_port,
@@ -99,13 +107,15 @@ pub fn harmony_list() -> anyhow::Result<()> {
     );
     // Separator
     println!(
-        "{id:-<id_w$}-+-{label:-<label_w$}-+-{ip:-<ip_w$}-+-{port:-<port_w$}-+-{prefix:-<prefix_w$}",
+        "{id:-<id_w$}-+-{gateway_id:-<gw_w$}-+-{label:-<label_w$}-+-{ip:-<ip_w$}-+-{port:-<port_w$}-+-{prefix:-<prefix_w$}",
         id = "",
+        gateway_id = "",
         label = "",
         ip = "",
         port = "",
         prefix = "",
         id_w = w_id,
+        gw_w = w_gateway_id,
         label_w = w_label,
         ip_w = w_ip,
         port_w = w_port,
@@ -113,14 +123,17 @@ pub fn harmony_list() -> anyhow::Result<()> {
     );
     // Rows
     for inst in list {
+        let gateway_id_display = inst.gateway_id.as_deref().unwrap_or("");
         println!(
-            "{id:<id_w$} | {label:<label_w$} | {ip:<ip_w$} | {port:<port_w$} | {prefix:<prefix_w$}",
+            "{id:<id_w$} | {gateway_id:<gw_w$} | {label:<label_w$} | {ip:<ip_w$} | {port:<port_w$} | {prefix:<prefix_w$}",
             id = inst.id,
+            gateway_id = gateway_id_display,
             label = inst.label,
             ip = inst.ip,
             port = inst.port,
             prefix = inst.path_prefix,
             id_w = w_id,
+            gw_w = w_gateway_id,
             label_w = w_label,
             ip_w = w_ip,
             port_w = w_port,

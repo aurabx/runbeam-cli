@@ -17,6 +17,9 @@ pub struct HarmonyInstance {
     pub label: String,
     #[serde(default = "default_path_prefix")]
     pub path_prefix: String,
+    /// Runbeam Cloud gateway ULID (set after authorization)
+    #[serde(default)]
+    pub gateway_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,17 +137,25 @@ pub fn add_harmony_instance(new_inst: HarmonyInstance) -> Result<()> {
 
     // De-duplicate by label first, else by ip:port
     if let Some(existing) = list.iter_mut().find(|i| i.label == new_inst.label) {
-        // Update fields but preserve ID
+        // Update fields but preserve ID and gateway_id
         existing.ip = new_inst.ip;
         existing.port = new_inst.port;
         existing.label = new_inst.label;
         existing.path_prefix = new_inst.path_prefix;
+        // Only update gateway_id if new instance has one
+        if new_inst.gateway_id.is_some() {
+            existing.gateway_id = new_inst.gateway_id;
+        }
     } else if let Some(existing) = list
         .iter_mut()
         .find(|i| i.ip == new_inst.ip && i.port == new_inst.port)
     {
         existing.label = new_inst.label;
         existing.path_prefix = new_inst.path_prefix;
+        // Only update gateway_id if new instance has one
+        if new_inst.gateway_id.is_some() {
+            existing.gateway_id = new_inst.gateway_id;
+        }
     } else {
         let mut to_add = new_inst;
         if to_add.id.is_empty() {
@@ -356,6 +367,7 @@ mod tests {
             port: 8081,
             label: "test".to_string(),
             path_prefix: "admin".to_string(),
+            gateway_id: None,
         };
 
         let json = serde_json::to_string(&instance).expect("Failed to serialize");
@@ -400,5 +412,78 @@ mod tests {
         let path = PathBuf::from("/tmp/test.json");
         let tmp = tmp_path_for(&path);
         assert_eq!(tmp, PathBuf::from("/tmp/test.json.tmp"));
+    }
+
+    #[test]
+    fn test_harmony_instance_with_gateway_id() {
+        let instance = HarmonyInstance {
+            id: "abc123".to_string(),
+            ip: "127.0.0.1".to_string(),
+            port: 8081,
+            label: "test".to_string(),
+            path_prefix: "admin".to_string(),
+            gateway_id: Some("01JBXXXXXXXXXXXXXXXXXXXXXXXXXX".to_string()),
+        };
+
+        let json = serde_json::to_string(&instance).expect("Failed to serialize");
+        assert!(json.contains("gateway_id"));
+        assert!(json.contains("01JBXXXXXXXXXXXXXXXXXXXXXXXXXX"));
+
+        let deserialized: HarmonyInstance =
+            serde_json::from_str(&json).expect("Failed to deserialize");
+        assert_eq!(deserialized.gateway_id, Some("01JBXXXXXXXXXXXXXXXXXXXXXXXXXX".to_string()));
+        assert_eq!(instance, deserialized);
+    }
+
+    #[test]
+    fn test_harmony_instance_backward_compatibility() {
+        // Test that instances without gateway_id (old format) can be loaded
+        let json = r#"{
+            "id": "abc123",
+            "ip": "127.0.0.1",
+            "port": 8081,
+            "label": "test",
+            "path_prefix": "admin"
+        }"#;
+
+        let instance: HarmonyInstance = serde_json::from_str(json).expect("Failed to deserialize");
+        assert_eq!(instance.gateway_id, None);
+        assert_eq!(instance.id, "abc123");
+        assert_eq!(instance.label, "test");
+    }
+
+    #[test]
+    fn test_harmony_instance_gateway_id_serialization() {
+        // Test with gateway_id present
+        let instance_with_gw = HarmonyInstance {
+            id: "test123".to_string(),
+            ip: "192.168.1.1".to_string(),
+            port: 9090,
+            label: "my-harmony".to_string(),
+            path_prefix: "admin".to_string(),
+            gateway_id: Some("01JBXX1234567890ABCDEFGHIJK".to_string()),
+        };
+
+        let json = serde_json::to_string(&instance_with_gw).expect("Failed to serialize");
+        let deserialized: HarmonyInstance =
+            serde_json::from_str(&json).expect("Failed to deserialize");
+
+        assert_eq!(deserialized.gateway_id, Some("01JBXX1234567890ABCDEFGHIJK".to_string()));
+
+        // Test with gateway_id absent (None)
+        let instance_without_gw = HarmonyInstance {
+            id: "test456".to_string(),
+            ip: "192.168.1.2".to_string(),
+            port: 9091,
+            label: "other-harmony".to_string(),
+            path_prefix: "admin".to_string(),
+            gateway_id: None,
+        };
+
+        let json = serde_json::to_string(&instance_without_gw).expect("Failed to serialize");
+        let deserialized: HarmonyInstance =
+            serde_json::from_str(&json).expect("Failed to deserialize");
+
+        assert_eq!(deserialized.gateway_id, None);
     }
 }

@@ -192,7 +192,7 @@ pub fn login() -> Result<()> {
                 if let Some(user_info) = user {
                     println!("   Logged in as: {} ({})", user_info.name, user_info.email);
                 }
-                println!("   JWT saved to ~/.runbeam/auth.json");
+                println!("   Token saved to secure storage");
                 if let Some(exp) = expires_at {
                     println!(
                         "   Token expires in {} hours",
@@ -275,6 +275,37 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     // Load user authentication token
     let auth = storage::load_auth()?.context("Not logged in. Please run `runbeam login` first.")?;
 
+    // Validate the JWT token before attempting authorization
+    debug!("Validating JWT token before authorization...");
+    let validation_result = tokio::runtime::Runtime::new()
+        .expect("Failed to create Tokio runtime")
+        .block_on(sdk_validate_jwt(&auth.token, 24));
+
+    match validation_result {
+        Ok(claims) => {
+            debug!("Token valid: sub={}, exp={}", claims.sub, claims.exp);
+            // Check if token is about to expire (within 1 hour)
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64;
+            let time_remaining = claims.exp - now;
+            if time_remaining < 3600 {
+                println!("⚠️  Warning: Your token expires in {} minutes.", time_remaining / 60);
+                println!("   Consider running `runbeam login` to refresh your token.");
+                println!();
+            }
+        }
+        Err(e) => {
+            println!("❌ Your authentication token is invalid or expired.");
+            println!();
+            println!("Error: {}", e);
+            println!();
+            println!("Please run `runbeam login` to authenticate again.");
+            anyhow::bail!("Token validation failed: {}", e);
+        }
+    }
+
     // Load the Harmony instance from storage
     let instances = storage::load_harmony_instances()?;
 
@@ -344,6 +375,14 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     println!();
 
     info!("Gateway authorized: {}", auth_response.gateway.id);
+
+    // Update the stored instance with the gateway_id
+    let mut instances = storage::load_harmony_instances()?;
+    if let Some(stored_instance) = instances.iter_mut().find(|i| i.id == instance.id) {
+        stored_instance.gateway_id = Some(auth_response.gateway.id.clone());
+        storage::save_harmony_instances(&instances)?;
+        debug!("Stored gateway_id {} for instance {}", auth_response.gateway.id, instance.id);
+    }
 
     // Send machine token to Harmony proxy instance
     println!(
