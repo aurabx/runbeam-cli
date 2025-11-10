@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-11-10
+
+### Added
+
+- **`harmony:reload` Command**
+  - New command to reload Harmony instance configuration
+  - Triggers a reload of the Harmony proxy without restarting the service
+  - Useful for applying configuration changes dynamically
+
+- **`harmony:update` Command**
+  - New command to push configuration updates to Runbeam Cloud
+  - Synchronizes local Harmony configuration with the cloud platform
+  - Enables centralized configuration management
+  - Includes comprehensive integration tests
+
+- **Gateway ID Tracking**
+  - CLI now tracks and persists gateway IDs from Runbeam authorization responses
+  - Gateway IDs stored alongside Harmony instance configuration
+  - Enables better correlation between local instances and cloud resources
+  - Backward compatible with instances without gateway IDs
+
+- **Runbeam Disabled Handling**
+  - Improved error handling when Runbeam integration is disabled in Harmony
+  - Provides clear feedback when attempting operations on instances without Runbeam enabled
+  - Clippy lint fixes for code quality
+
+### Changed
+
+- **SDK Update: runbeam-sdk 0.4.0 → 0.5.0**
+  - ⚠️ **Breaking Change**: Change Management API endpoints updated from `/gateway/*` to `/api/changes/*`
+  - Added support for pushing configuration to Runbeam Cloud (used by `harmony:update`)
+  - Added transform resource retrieval functionality
+  - Requires Runbeam API v1.2 or later
+
+### Fixed
+
+- **macOS Keyring Compatibility**
+  - Fixed keyring storage compatibility issues on macOS (via SDK update)
+  - Improved reliability of secure token storage on macOS Keychain
+
+### Dependencies
+
+- Updated `runbeam-sdk` from `0.4.0` to `0.5.0`
+
 ## [0.5.0] - 2024-11-01
 
 ### Added

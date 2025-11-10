@@ -1,6 +1,6 @@
 [package]
 name = "runbeam-cli"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
 authors = ["Aurabox <hello@aurabox.cloud>"]
 description = "CLI for managing Runbeam and Harmony"
@@ -39,7 +39,7 @@ open = "5"
 tokio = { version = "1", features = ["rt", "macros"] }
 # Runbeam SDK for API client and JWT validation
 #runbeam-sdk = { path = "../runbeam-sdk" }
-runbeam-sdk = {version = "0.4.0"}
+runbeam-sdk = {version = "0.5.0"}
 
 [dev-dependencies]
 tempfile = "3"
