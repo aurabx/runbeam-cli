@@ -160,6 +160,17 @@ pub enum Command {
         id: String,
     },
 
+    /// Trigger Harmony to upload its configuration to Runbeam Cloud
+    #[command(name = "harmony:update")]
+    HarmonyUpdate {
+        /// Select instance by short ID
+        #[arg(long = "id", conflicts_with = "label")]
+        id: Option<String>,
+        /// Select instance by label
+        #[arg(short = 'l', long = "label", conflicts_with = "id")]
+        label: Option<String>,
+    },
+
     /// Test browser opening (development only)
     #[command(name = "test-browser")]
     TestBrowser,

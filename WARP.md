@@ -70,6 +70,18 @@ runbeam config:set api-url https://api.runbeam.com  # Set API URL
 runbeam config:unset api-url                  # Unset API URL (revert to env or default)
 ```
 
+### Harmony Management
+```sh
+runbeam harmony:add --ip 127.0.0.1 --port 9090 --label my-harmony  # Register Harmony instance
+runbeam harmony:list                                                # List registered instances
+runbeam harmony:authorize --label my-harmony                        # Authorize with Runbeam Cloud
+runbeam harmony:update --label my-harmony                           # Upload config to Runbeam Cloud
+runbeam harmony:update --id abc123                                  # Update by short ID
+runbeam harmony:info --label my-harmony                             # Get system information
+runbeam harmony:routes --label my-harmony                           # List routes
+runbeam harmony:pipelines --label my-harmony                        # List pipelines
+```
+
 Configuration priority (highest to lowest):
 1. Config file (`~/.runbeam/config.json`)
 2. Environment variable (`RUNBEAM_API_URL`)

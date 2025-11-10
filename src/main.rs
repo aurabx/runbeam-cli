@@ -99,6 +99,9 @@ fn main() -> Result<()> {
         Some(cli::Command::HarmonyDeleteKey { id }) => {
             harmony::harmony::harmony_delete_key(&id)?;
         }
+        Some(cli::Command::HarmonyUpdate { id, label }) => {
+            harmony::management::update(id.as_deref(), label.as_deref())?;
+        }
         Some(cli::Command::TestBrowser) => {
             println!("Testing browser opening...");
             match open::that_detached("https://www.google.com") {
