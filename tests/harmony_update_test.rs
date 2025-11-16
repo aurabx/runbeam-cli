@@ -1,5 +1,6 @@
-use assert_cmd::Command;
+use assert_cmd::prelude::*;
 use predicates::prelude::*;
+use std::process::Command;
 
 // Import CLI and storage modules for testing
 #[path = "../src/cli.rs"]
@@ -12,7 +13,7 @@ mod storage;
 #[test]
 fn test_harmony_update_command_exists() {
     // Test that the command is registered
-    let mut cmd = Command::cargo_bin("runbeam").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.arg("--help");
     
     cmd.assert()
@@ -23,7 +24,7 @@ fn test_harmony_update_command_exists() {
 #[test]
 fn test_harmony_update_help() {
     // Test the help text for harmony:update
-    let mut cmd = Command::cargo_bin("runbeam").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["harmony:update", "--help"]);
     
     cmd.assert()
@@ -36,7 +37,7 @@ fn test_harmony_update_help() {
 #[test]
 fn test_harmony_update_requires_id_or_label() {
     // Test that command fails without --id or --label
-    let mut cmd = Command::cargo_bin("runbeam").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.arg("harmony:update");
     
     cmd.assert()
@@ -48,7 +49,7 @@ fn test_harmony_update_requires_id_or_label() {
 #[test]
 fn test_harmony_update_conflicts_id_and_label() {
     // Test that --id and --label are mutually exclusive
-    let mut cmd = Command::cargo_bin("runbeam").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["harmony:update", "--id", "abc123", "--label", "test"]);
     
     cmd.assert()
@@ -60,7 +61,7 @@ fn test_harmony_update_conflicts_id_and_label() {
 #[test]
 fn test_harmony_update_nonexistent_instance() {
     // Test error when instance doesn't exist
-    let mut cmd = Command::cargo_bin("runbeam").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["harmony:update", "--id", "nonexistent"]);
     
     cmd.assert()
@@ -73,7 +74,7 @@ fn test_harmony_update_nonexistent_instance() {
 #[test]
 fn test_harmony_update_with_verbose() {
     // Test that verbose flag works
-    let mut cmd = Command::cargo_bin("runbeam").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["-v", "harmony:update", "--help"]);
     
     cmd.assert().success();
@@ -82,7 +83,7 @@ fn test_harmony_update_with_verbose() {
 #[test]
 fn test_harmony_update_with_quiet() {
     // Test that quiet flag works
-    let mut cmd = Command::cargo_bin("runbeam").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["-q", "harmony:update", "--help"]);
     
     cmd.assert().success();
