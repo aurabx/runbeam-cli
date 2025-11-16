@@ -1,6 +1,6 @@
 [package]
 name = "runbeam-cli"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2024"
 authors = ["Aurabox <hello@aurabox.cloud>"]
 description = "CLI for managing Runbeam and Harmony"
