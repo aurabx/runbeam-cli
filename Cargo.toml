@@ -39,7 +39,7 @@ open = "5"
 tokio = { version = "1", features = ["rt", "macros"] }
 # Runbeam SDK for API client and JWT validation
 #runbeam-sdk = { path = "../runbeam-sdk" }
-runbeam-sdk = {version = "0.6"}
+runbeam-sdk = {version = "0.6.2"}
 
 [dev-dependencies]
 tempfile = "3"
