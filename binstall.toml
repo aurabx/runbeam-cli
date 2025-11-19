@@ -1,0 +1,16 @@
+# cargo-binstall configuration for runbeam-cli
+# Enables: cargo binstall runbeam-cli
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/runbeam-{ target }.{ archive-format }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+# Windows uses ZIP format instead
+[[package.metadata.binstall.overrides]]
+targets = "x86_64-pc-windows-msvc"
+pkg-fmt = "zip"
+
+# Extract single binary from archive
+[package.metadata.binstall.bin.runbeam]
+bin-dir = "runbeam{ binary-ext }"

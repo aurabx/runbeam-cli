@@ -1,0 +1,37 @@
+# This is a template for the homebrew-tap formula
+# Copy this to: https://github.com/aurabx/homebrew-tap/blob/main/Formula/runbeam.rb
+# Update the version, URLs, and SHAs when releasing new versions
+
+class Runbeam < Formula
+  desc "CLI for managing Runbeam and Harmony proxy instances"
+  homepage "https://harmonyproxy.com"
+  url "https://github.com/aurabx/runbeam-cli/releases/download/v{{ version }}/runbeam-{{ target }}.tar.gz"
+  version "{{ version }}"
+  license "Apache-2.0"
+
+  on_macos do
+    on_intel do
+      sha256 "{{ sha256_x86_64_apple_darwin }}"
+    end
+    on_arm do
+      sha256 "{{ sha256_aarch64_apple_darwin }}"
+    end
+  end
+
+  on_linux do
+    on_intel do
+      sha256 "{{ sha256_x86_64_unknown_linux_musl }}"
+    end
+    on_arm do
+      sha256 "{{ sha256_aarch64_unknown_linux_musl }}"
+    end
+  end
+
+  def install
+    bin.install "runbeam"
+  end
+
+  test do
+    system bin/"runbeam", "--version"
+  end
+end

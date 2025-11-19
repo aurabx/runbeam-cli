@@ -5,62 +5,36 @@ CLI for managing Runbeam and Harmony.
 Homepage: https://harmonyproxy.com  
 Repository: https://github.com/aurabx/runbeam-cli
 
-## Installation
+## Quick Install
 
-Download a prebuilt binary from [GitHub Releases](https://github.com/aurabx/runbeam-cli/releases):
-- Visit the Releases page for this project
-- Choose the archive for your OS and architecture
-- Verify checksum and place the binary in your PATH
-
-### macOS
+**macOS/Linux (Homebrew):**
 ```sh
-# Verify checksum
-shasum -a 256 runbeam-macos-aarch64-v0.3.0.tar.gz
-cat runbeam-macos-aarch64-v0.3.0.tar.gz.sha256
-
-# Extract and install
-tar -xzf runbeam-macos-aarch64-v0.3.0.tar.gz
-chmod +x runbeam
-mv runbeam /usr/local/bin
-# Or: mv runbeam ~/.local/bin and ensure ~/.local/bin is on PATH
+brew tap aurabx/tap
+brew install runbeam
 ```
 
-### Linux
-```sh
-# Verify checksum
-sha256sum runbeam-linux-x86_64-v0.3.0.tar.gz
-cat runbeam-linux-x86_64-v0.3.0.tar.gz.sha256
-
-# Extract and install
-tar -xzf runbeam-linux-x86_64-v0.3.0.tar.gz
-chmod +x runbeam
-sudo mv runbeam /usr/local/bin
-# Or: mv runbeam ~/.local/bin and ensure it is on PATH
-```
-
-### Windows
-```powershell
-# Verify checksum
-certutil -hashfile runbeam-windows-x86_64-v0.3.0.zip SHA256
-
-# Extract the ZIP using Explorer or PowerShell
-Expand-Archive .\runbeam-windows-x86_64-v0.3.0.zip -DestinationPath .
-# Move runbeam.exe to a folder on your PATH or add the folder to PATH
-```
-
-### Install from Crates.io
+**All Platforms (Cargo):**
 ```sh
 cargo install runbeam-cli
 ```
 
-### Install from Source
+**All Platforms (Binary):**
 ```sh
-# Using a local checkout
-cargo install --path .
-
-# Or install directly from Git
-cargo install --git https://github.com/aurabx/runbeam-cli
+cargo install cargo-binstall
+cargo binstall runbeam-cli
 ```
+
+For detailed installation instructions and other methods, see [INSTALL.md](INSTALL.md).
+
+## Installation
+
+See [INSTALL.md](INSTALL.md) for comprehensive installation instructions including:
+- 🍺 Homebrew (macOS & Linux)
+- 📦 cargo-binstall (All Platforms)
+- 🔧 Cargo (All Platforms)
+- 📥 Direct binary downloads
+- 🔐 Checksum verification
+- 🆘 Troubleshooting
 
 ## Quickstart
 
