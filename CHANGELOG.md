@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-11-19
+
+### Changed
+
+- **SDK Update: runbeam-sdk 0.6.2 → 0.7.2**
+  - ⚠️ **Breaking Change**: Removed OS keyring storage (macOS Keychain, Linux Secret Service, Windows Credential Manager)
+  - All tokens now stored using encrypted filesystem storage at `~/.runbeam/<instance_id>/auth.json`
+  - Encryption uses age encryption with keys from `RUNBEAM_ENCRYPTION_KEY` env var or auto-generated at `~/.runbeam/<instance_id>/encryption.key`
+  - **Migration required**: Users must re-authenticate after upgrading (`runbeam login`)
+  - Fixed: Runbeam configuration synchronization issues
+
+### Benefits
+
+- **Simplified Dependencies**: Removed system dependencies (dbus, libdbus-sys, openssl, openssl-sys)
+- **Better Cross-Platform Support**: Pure Rust implementation with no platform-specific FFI
+- **Improved Deployment**: Better support for headless systems, CI/CD pipelines, Docker, Kubernetes, cloud VMs
+- **Smaller Binary Size**: Faster compilation and reduced binary footprint
+
+### Migration Guide
+
+1. Upgrade to version 0.7.0
+2. Run `runbeam login` to re-authenticate (existing keyring tokens will not be migrated)
+3. Re-authorize Harmony instances with `runbeam harmony:authorize --label <name>`
+
+**Note**: Machine tokens expire after 30 days anyway, so losing keyring-stored tokens has minimal long-term impact.
+
 ## [0.6.1] - 2025-11-16
 
 - Dependencies updated

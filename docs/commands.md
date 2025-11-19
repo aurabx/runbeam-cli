@@ -15,17 +15,34 @@ Usage:
 runbeam list
 ```
 
+### test-browser (development only)
+
+Test that the CLI can open a browser window on your system.
+
+Usage:
+```sh
+runbeam test-browser
+```
+
+This command is intended for development and troubleshooting only and is not required for normal usage.
+
 ## Authentication Commands
+
+Authentication uses secure token storage managed by the Runbeam SDK. Tokens are stored in the OS keyring when available, or in encrypted filesystem storage as a fallback.
+
+Any legacy plaintext token file (`~/.runbeam/auth.json`) is automatically migrated to secure storage on first use.
 
 ### login
 
-Log in to Runbeam via browser authentication. Opens a browser window for OAuth authentication and saves the JWT token to `~/.runbeam/auth.json`.
+Log in to Runbeam via browser authentication. Opens a browser window for OAuth authentication and saves the token to secure storage.
 
 The login process:
 1. Requests a device token from the API
 2. Opens your browser to the authentication page
 3. Polls the server every 5 seconds until authentication completes
-4. Saves the JWT token locally
+4. Saves the token to secure storage and verifies it using RS256 with JWKS
+
+If a valid token already exists, the CLI will report that you are already logged in and will not start a new login flow.
 
 Usage:
 ```sh
@@ -34,11 +51,29 @@ runbeam login
 
 ### logout
 
-Log out and clear stored authentication. Removes the JWT token from `~/.runbeam/auth.json`.
+Log out and clear stored authentication. Removes the authentication token from secure storage (and any legacy plaintext file, if present).
 
 Usage:
 ```sh
 runbeam logout
+```
+
+### verify
+
+Verify the stored authentication token and display decoded information.
+
+This command:
+- Loads the current token from secure storage
+- Verifies the token using the Runbeam SDK (RS256 + JWKS)
+- Prints issuer, subject, audience (if present)
+- Prints user and team information (if present)
+- Shows when the token expires and how long until expiry
+
+If the token is invalid or expired, a detailed error is shown with guidance to run `runbeam login` again.
+
+Usage:
+```sh
+runbeam verify
 ```
 
 ## Configuration Commands
@@ -95,7 +130,7 @@ runbeam config:unset api-url
 
 ## Harmony Commands
 
-These commands are used to manage Harmony instances via the management API.
+These commands are used to manage Harmony instances via the management API and to integrate them with Runbeam Cloud.
 
 ### harmony:add
 
@@ -106,6 +141,7 @@ Options:
 - `-p, --port <PORT>`: Port of the instance [default: 8081]
 - `-l, --label <LABEL>`: Internal label; defaults to "ip:port" if not provided
 - `-x, --path-prefix <PATH_PREFIX>`: Path prefix for the management API [default: admin]
+- `-k, --key <KEY>`: **Deprecated** base64-encoded encryption key. Encryption keys are now managed automatically by the SDK and this option is ignored.
 
 Examples:
 ```sh
@@ -117,7 +153,7 @@ runbeam harmony:add -i 192.168.1.100 -p 8082 -l production
 
 List all registered Harmony instances from the local data directory.
 
-Output is a table with headers: ID, LABEL, IP, PORT, PREFIX.
+Output is a table with headers: `ID`, `GATEWAY_ID`, `LABEL`, `IP`, `PORT`, `PREFIX`.
 
 Usage:
 ```sh
@@ -216,7 +252,7 @@ runbeam harmony:reload -l my-label
 
 ### harmony:authorize
 
-Authorize a Harmony instance to communicate with Runbeam Cloud. This exchanges your user token for a machine-scoped token that the Harmony instance can use.
+Authorize a Harmony instance to communicate with Runbeam Cloud. This exchanges your user token for a machine-scoped token that the Harmony instance can use and delivers that token to the Harmony proxy.
 
 **Prerequisites**: 
 - You must be logged in (`runbeam login`) before authorizing a Harmony instance
@@ -224,11 +260,11 @@ Authorize a Harmony instance to communicate with Runbeam Cloud. This exchanges y
 
 Authorization flow:
 1. Uses your user authentication token from `runbeam login`
-2. Calls the Harmony management API with your token
-3. Harmony exchanges your token for a machine-scoped token (30-day expiry)
-4. Harmony stores the machine token for future API calls
+2. Calls the Runbeam Cloud API to authorize the gateway and issue a machine-scoped token
+3. Stores the gateway ID against the Harmony instance locally
+4. Sends the machine token to the Harmony proxy at `http://<ip>:<port>/<prefix>/token`
 
-**Note**: If you receive a 403 Forbidden error, ensure that Runbeam Cloud integration is enabled in your Harmony configuration:
+If the Harmony proxy returns `403 Forbidden` and indicates Runbeam is disabled, ensure your Harmony configuration contains:
 ```toml
 [runbeam]
 enabled = true
@@ -237,6 +273,8 @@ enabled = true
 Options:
 - `--id <ID>`: Select instance by short ID (conflicts with --label)
 - `-l, --label <LABEL>`: Select instance by label (conflicts with --id)
+- `--update`: After successful authorization, automatically upload configuration using `harmony:update`
+- `-y, --yes`: Skip interactive prompts (for CI/automation). When used without `--update`, configuration upload is skipped.
 
 Examples:
 ```sh
@@ -245,6 +283,64 @@ runbeam harmony:authorize --id 1a2b3c4d
 
 # Authorize by label
 runbeam harmony:authorize -l my-label
+
+# Authorize and automatically upload configuration
+runbeam harmony:authorize --id 1a2b3c4d --update
+
+# Non-interactive authorization suitable for CI (no config upload)
+runbeam harmony:authorize --id 1a2b3c4d -y
+```
+
+### harmony:update
+
+Trigger Harmony to upload its local configuration to Runbeam Cloud by calling the management API `POST /{prefix}/update`.
+
+On success, this command reports the size of the uploaded configuration.
+
+Options:
+- `--id <ID>`: Select instance by short ID (conflicts with --label)
+- `-l, --label <LABEL>`: Select instance by label (conflicts with --id)
+
+Examples:
+```sh
+# Upload configuration by ID
+runbeam harmony:update --id 1a2b3c4d
+
+# Upload configuration by label
+runbeam harmony:update -l my-label
+```
+
+### harmony:set-key (deprecated)
+
+Set or update the encryption key for a Harmony instance.
+
+This command is **deprecated**. Encryption keys are now managed automatically by the Runbeam SDK's secure storage backend. The command prints guidance and does not modify any keys.
+
+Usage:
+```sh
+runbeam harmony:set-key --id <ID> --key <BASE64_KEY>
+```
+
+### harmony:show-key (deprecated)
+
+Show the encryption key for a Harmony instance.
+
+This command is **deprecated**. Encryption keys are managed automatically and are not directly accessible. The command prints guidance and does not display any keys.
+
+Usage:
+```sh
+runbeam harmony:show-key --id <ID>
+```
+
+### harmony:delete-key (deprecated)
+
+Delete the encryption key for a Harmony instance.
+
+This command is **deprecated**. Encryption keys are managed automatically by the Runbeam SDK, including their lifecycle. The command prints guidance and does not delete any keys.
+
+Usage:
+```sh
+runbeam harmony:delete-key --id <ID>
 ```
 
 ## Global Options

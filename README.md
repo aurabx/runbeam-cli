@@ -119,23 +119,25 @@ runbeam logout
 
 **Secure Token Storage:**
 
-Authentication tokens are stored securely using OS-native credential stores:
-- **macOS**: Keychain
-- **Linux**: Secret Service API (freedesktop.org)
-- **Windows**: Credential Manager
+As of v0.7.0, authentication tokens are stored using encrypted filesystem storage:
+- **macOS and Linux**: `~/.runbeam/<instance_id>/auth.json` (encrypted with age encryption)
+- **Windows**: `%APPDATA%\runbeam\<instance_id>\auth.json` (encrypted with age encryption)
 
-If OS keyring is unavailable, tokens are automatically encrypted using ChaCha20-Poly1305 AEAD and stored at:
-- **macOS and Linux**: `~/.runbeam/user_token.json` (encrypted)
-- **Windows**: `%APPDATA%\runbeam\user_token.json` (encrypted)
+Encryption keys are sourced from:
+1. `RUNBEAM_ENCRYPTION_KEY` environment variable, or
+2. Auto-generated at `~/.runbeam/<instance_id>/encryption.key`
 
-**Automatic Migration:**
+**Breaking Change in v0.7.0:**
 
-If you're upgrading from an earlier version with plaintext token storage at `~/.runbeam/auth.json`, the CLI will automatically:
-1. Detect the legacy plaintext token file
-2. Migrate your token to secure storage (keyring or encrypted filesystem)
-3. Remove the legacy plaintext file
+OS keyring storage (macOS Keychain, Linux Secret Service, Windows Credential Manager) has been removed to simplify dependencies and improve cross-platform compatibility. Existing tokens stored in OS keyring will NOT be automatically migrated.
 
-No user action is required - migration happens automatically on first run after upgrading.
+**Migration from v0.6.x:**
+
+If you're upgrading from v0.6.x or earlier:
+1. Run `runbeam login` to re-authenticate
+2. Run `runbeam harmony:authorize --label <name>` for each Harmony instance
+
+**Note**: Machine tokens expire after 30 days anyway, so losing keyring-stored tokens has minimal long-term impact.
 
 **Token Verification:**
 
@@ -178,17 +180,17 @@ runbeam harmony:authorize --id 1a2b3c4d
 - User tokens are short-lived (used only for authorization)
 - Machine tokens are encrypted at rest using age X25519 encryption
 - Each Harmony instance can have its own encryption key
-- Encryption keys are stored securely in OS keyring (macOS Keychain, Linux Secret Service, Windows Credential Manager)
+- Encryption keys are auto-generated or provided via `RUNBEAM_ENCRYPTION_KEY` environment variable
 - You can revoke a Harmony instance's access independently
 - Tokens can be renewed before expiry
 
 ## Encryption Key Management
 
-**Note:** As of CLI v0.3.0, encryption key management is handled automatically by the SDK. The commands below are deprecated.
+**Note:** As of CLI v0.7.0, encryption keys are managed automatically by the SDK using filesystem storage.
 
 The Runbeam SDK automatically manages encryption keys for secure token storage:
 - Keys are generated automatically on first use
-- Keys are stored securely in OS keyring at `runbeam/encryption_key`
+- Keys are stored at `~/.runbeam/<instance_id>/encryption.key` or provided via `RUNBEAM_ENCRYPTION_KEY` environment variable
 - Keys are used transparently for encrypted filesystem token storage
 - No manual key management is required
 

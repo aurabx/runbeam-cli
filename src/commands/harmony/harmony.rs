@@ -195,10 +195,9 @@ pub fn harmony_set_key(_instance_id: &str, _encryption_key: &str) -> anyhow::Res
     println!("⚠️  This command is deprecated.");
     println!();
     println!("Encryption keys are now managed automatically by the Runbeam SDK.");
-    println!(
-        "The SDK uses secure OS-native storage (Keychain, Secret Service, Credential Manager)"
-    );
-    println!("with automatic fallback to encrypted filesystem storage.");
+    println!("The SDK uses encrypted filesystem storage with age encryption.");
+    println!("Keys are auto-generated at ~/.runbeam/<instance_id>/encryption.key");
+    println!("or provided via RUNBEAM_ENCRYPTION_KEY environment variable.");
     println!();
     println!("No manual key management is required.");
     println!();
@@ -215,10 +214,9 @@ pub fn harmony_show_key(_instance_id: &str) -> anyhow::Result<()> {
     println!("⚠️  This command is deprecated.");
     println!();
     println!("Encryption keys are now managed automatically by the Runbeam SDK.");
-    println!(
-        "The SDK uses secure OS-native storage (Keychain, Secret Service, Credential Manager)"
-    );
-    println!("with automatic fallback to encrypted filesystem storage.");
+    println!("The SDK uses encrypted filesystem storage with age encryption.");
+    println!("Keys are auto-generated at ~/.runbeam/<instance_id>/encryption.key");
+    println!("or provided via RUNBEAM_ENCRYPTION_KEY environment variable.");
     println!();
     println!("Keys are stored securely and are not directly accessible.");
     println!();
