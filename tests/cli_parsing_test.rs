@@ -272,9 +272,11 @@ fn test_parse_test_browser_command() {
 fn test_parse_harmony_authorize_with_id() {
     let args = cli::Cli::parse_from(["runbeam", "harmony:authorize", "--id", "abc123"]);
     match args.command {
-        Some(cli::Command::HarmonyAuthorize { id, label }) => {
+        Some(cli::Command::HarmonyAuthorize { id, label, update, yes }) => {
             assert_eq!(id, Some("abc123".to_string()));
             assert_eq!(label, None);
+            assert!(!update);
+            assert!(!yes);
         }
         _ => panic!("Expected HarmonyAuthorize command"),
     }
@@ -284,9 +286,11 @@ fn test_parse_harmony_authorize_with_id() {
 fn test_parse_harmony_authorize_with_label() {
     let args = cli::Cli::parse_from(["runbeam", "harmony:authorize", "--label", "production"]);
     match args.command {
-        Some(cli::Command::HarmonyAuthorize { id, label }) => {
+        Some(cli::Command::HarmonyAuthorize { id, label, update, yes }) => {
             assert_eq!(id, None);
             assert_eq!(label, Some("production".to_string()));
+            assert!(!update);
+            assert!(!yes);
         }
         _ => panic!("Expected HarmonyAuthorize command"),
     }
@@ -296,9 +300,53 @@ fn test_parse_harmony_authorize_with_label() {
 fn test_parse_harmony_authorize_with_short_label() {
     let args = cli::Cli::parse_from(["runbeam", "harmony:authorize", "-l", "staging"]);
     match args.command {
-        Some(cli::Command::HarmonyAuthorize { id, label }) => {
+        Some(cli::Command::HarmonyAuthorize { id, label, update, yes }) => {
             assert_eq!(id, None);
             assert_eq!(label, Some("staging".to_string()));
+            assert!(!update);
+            assert!(!yes);
+        }
+        _ => panic!("Expected HarmonyAuthorize command"),
+    }
+}
+
+#[test]
+fn test_parse_harmony_authorize_with_update_flag() {
+    let args = cli::Cli::parse_from(["runbeam", "harmony:authorize", "--id", "abc123", "--update"]);
+    match args.command {
+        Some(cli::Command::HarmonyAuthorize { id, label, update, yes }) => {
+            assert_eq!(id, Some("abc123".to_string()));
+            assert_eq!(label, None);
+            assert!(update);
+            assert!(!yes);
+        }
+        _ => panic!("Expected HarmonyAuthorize command"),
+    }
+}
+
+#[test]
+fn test_parse_harmony_authorize_with_yes_flag() {
+    let args = cli::Cli::parse_from(["runbeam", "harmony:authorize", "--id", "abc123", "-y"]);
+    match args.command {
+        Some(cli::Command::HarmonyAuthorize { id, label, update, yes }) => {
+            assert_eq!(id, Some("abc123".to_string()));
+            assert_eq!(label, None);
+            assert!(!update);
+            assert!(yes);
+        }
+        _ => panic!("Expected HarmonyAuthorize command"),
+    }
+}
+
+#[test]
+fn test_parse_harmony_authorize_with_both_flags() {
+    let args = cli::Cli::parse_from(["runbeam", "harmony:authorize", "--label", "prod", "--update", "--yes"]);
+    match args.command {
+        Some(cli::Command::HarmonyAuthorize { id, label, update, yes }) => {
+            assert_eq!(id, None);
+            assert_eq!(label, Some("prod".to_string()));
+            assert!(update);
+            assert!(yes);
         }
         _ => panic!("Expected HarmonyAuthorize command"),
     }

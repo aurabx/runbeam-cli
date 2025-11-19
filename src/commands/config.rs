@@ -67,7 +67,7 @@ pub fn get_api_url() -> Result<String> {
         return Ok(url);
     }
 
-    Ok("http://runbeam.lndo.site".to_string())
+    Ok("http://app.runbeam.io/api".to_string())
 }
 
 /// Set a configuration value

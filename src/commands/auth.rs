@@ -5,7 +5,7 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{debug, info, warn};
 
-use crate::commands::config;
+use crate::commands::{config, harmony};
 use crate::storage::{self, CliAuth};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -269,7 +269,19 @@ pub fn logout() -> Result<()> {
 }
 
 /// Authorize a Harmony instance to communicate with Runbeam Cloud
-pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>) -> Result<()> {
+///
+/// # Arguments
+///
+/// * `instance_id` - Optional instance ID to authorize
+/// * `instance_label` - Optional instance label to authorize
+/// * `auto_update` - If true, automatically upload config after authorization
+/// * `skip_prompt` - If true, skip confirmation prompt (for CI/automation)
+pub fn authorize_harmony(
+    instance_id: Option<&str>,
+    instance_label: Option<&str>,
+    auto_update: bool,
+    skip_prompt: bool,
+) -> Result<()> {
     info!("Starting Harmony instance authorization...");
 
     // Load user authentication token
@@ -335,7 +347,7 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
     debug!("Using API URL: {}", api_url);
 
     // Create SDK client and authorize gateway
-    let client = RunbeamClient::new(api_url);
+    let client = RunbeamClient::new(api_url.clone());
 
     // Create Tokio runtime for async operations
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -376,23 +388,29 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
 
     info!("Gateway authorized: {}", auth_response.gateway.id);
 
+    // Clone instance data before reloading instances list
+    let instance_id = instance.id.clone();
+    let instance_ip = instance.ip.clone();
+    let instance_port = instance.port;
+    let instance_path_prefix = instance.path_prefix.clone();
+
     // Update the stored instance with the gateway_id
     let mut instances = storage::load_harmony_instances()?;
-    if let Some(stored_instance) = instances.iter_mut().find(|i| i.id == instance.id) {
+    if let Some(stored_instance) = instances.iter_mut().find(|i| i.id == instance_id) {
         stored_instance.gateway_id = Some(auth_response.gateway.id.clone());
         storage::save_harmony_instances(&instances)?;
-        debug!("Stored gateway_id {} for instance {}", auth_response.gateway.id, instance.id);
+        debug!("Stored gateway_id {} for instance {}", auth_response.gateway.id, instance_id);
     }
 
     // Send machine token to Harmony proxy instance
     println!(
         "\n📡 Sending token to Harmony proxy at {}:{}...",
-        instance.ip, instance.port
+        instance_ip, instance_port
     );
 
     let harmony_url = format!(
         "http://{}:{}/{}/token",
-        instance.ip, instance.port, instance.path_prefix
+        instance_ip, instance_port, instance_path_prefix
     );
     debug!("Posting token to: {}", harmony_url);
 
@@ -402,6 +420,7 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
         "gateway_id": auth_response.gateway.id,
         "gateway_code": auth_response.gateway.code,
         "abilities": auth_response.abilities,
+        "api_base_url": api_url,
     });
 
     let http_client = reqwest::Client::new();
@@ -431,6 +450,49 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
             if status.is_success() {
                 println!("✅ Token saved to Harmony proxy successfully!");
                 println!();
+
+                // Handle configuration upload based on flags
+                let should_update = if auto_update {
+                    // --update flag explicitly set
+                    true
+                } else if skip_prompt {
+                    // -y flag set without --update means don't update (for CI)
+                    false
+                } else {
+                    // Interactive prompt
+                    println!("📡 Upload local configuration to Runbeam Cloud?");
+                    println!("   This will overwrite any configuration changes made on Runbeam Cloud.");
+                    print!("   Upload configuration? [y/N]: ");
+                    std::io::Write::flush(&mut std::io::stdout()).ok();
+
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input).ok();
+                    let input = input.trim().to_lowercase();
+                    input == "y" || input == "yes"
+                };
+
+                if should_update {
+                    println!();
+                    println!("📡 Uploading configuration to Runbeam Cloud...");
+                    match harmony::management::update(Some(&instance_id), None) {
+                        Ok(_) => {
+                            println!("✅ Configuration uploaded successfully!");
+                        }
+                        Err(e) => {
+                            warn!("Configuration upload failed: {}", e);
+                            println!("⚠️  Configuration upload failed: {}", e);
+                            println!("   Authorization is still valid. You can manually upload config with:");
+                            println!("   runbeam harmony:update --id {}", instance_id);
+                        }
+                    }
+                } else {
+                    println!();
+                    println!("ℹ️  Configuration upload skipped.");
+                    println!("   You can manually upload config later with:");
+                    println!("   runbeam harmony:update --id {}", instance_id);
+                }
+
+                println!();
                 println!("🎉 Authorization complete! Harmony is ready to use.");
             } else if status == reqwest::StatusCode::FORBIDDEN {
                 // Handle 403 Forbidden - check if it's the runbeam.enabled issue
@@ -458,7 +520,7 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
                     println!("   1. Edit your Harmony configuration file (config.toml)");
                     println!("   2. Set: [runbeam]\n      enabled = true");
                     println!("   3. Restart Harmony and try again:");
-                    println!("      runbeam harmony:authorize --id {}", instance.id);
+                    println!("      runbeam harmony:authorize --id {}", instance_id);
                     println!();
                     println!(
                         "The gateway is authorized with Runbeam Cloud, but the token could not"
@@ -498,7 +560,7 @@ pub fn authorize_harmony(instance_id: Option<&str>, instance_label: Option<&str>
             println!("be delivered to the Harmony instance. Please ensure Harmony is running at");
             println!(
                 "{}:{} and try again, or manually configure the token.",
-                instance.ip, instance.port
+                instance_ip, instance_port
             );
         }
     }

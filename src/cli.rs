@@ -131,6 +131,12 @@ pub enum Command {
         /// Select instance by label
         #[arg(short = 'l', long = "label", conflicts_with = "id")]
         label: Option<String>,
+        /// Automatically upload configuration to Runbeam Cloud after authorization
+        #[arg(long = "update")]
+        update: bool,
+        /// Skip confirmation prompt and automatically answer yes (for CI/automation)
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
     },
 
     /// Set or update the encryption key for a Harmony instance

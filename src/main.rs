@@ -87,8 +87,8 @@ fn main() -> Result<()> {
         Some(cli::Command::HarmonyReload { id, label }) => {
             harmony::management::reload(id.as_deref(), label.as_deref())?;
         }
-        Some(cli::Command::HarmonyAuthorize { id, label }) => {
-            auth::authorize_harmony(id.as_deref(), label.as_deref())?;
+        Some(cli::Command::HarmonyAuthorize { id, label, update, yes }) => {
+            auth::authorize_harmony(id.as_deref(), label.as_deref(), update, yes)?;
         }
         Some(cli::Command::HarmonySetKey { id, encryption_key }) => {
             harmony::harmony::harmony_set_key(&id, &encryption_key)?;
