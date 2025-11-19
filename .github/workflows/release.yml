@@ -51,31 +51,26 @@ jobs:
         if: runner.os != 'Linux'
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package artefacts
-        shell: bash
-        run: |
-          mkdir -p release
-          cp target/${{ matrix.target }}/release/runbeam-cli* release/ || true
-          cd release
-          tar czf runbeam-cli-${{ matrix.target }}.tar.gz runbeam-cli* || true
-
-      - name: Generate SHA256 (Windows)
+      - name: Package artefacts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Get-FileHash "release/runbeam-cli-${{ matrix.target }}.tar.gz" -Algorithm SHA256 |
-            ForEach-Object { $_.Hash } | Out-File "release/runbeam-cli-${{ matrix.target }}.sha256" -Encoding ascii
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Compress-Archive -Path "target/${{ matrix.target }}/release/runbeam.exe" -DestinationPath "release/runbeam-${{ matrix.target }}.zip" -Force
+          Get-FileHash "release/runbeam-${{ matrix.target }}.zip" -Algorithm SHA256 | ForEach-Object { $_.Hash + "  runbeam-${{ matrix.target }}.zip" } | Out-File "release/runbeam-${{ matrix.target }}.sha256" -Encoding ascii
 
-      - name: Generate SHA256 (non-Windows)
+      - name: Package artefacts (Unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          shasum -a 256 release/runbeam-cli-${{ matrix.target }}.tar.gz > release/runbeam-cli-${{ matrix.target }}.sha256
+          mkdir -p release
+          tar czf release/runbeam-${{ matrix.target }}.tar.gz -C target/${{ matrix.target }}/release runbeam
+          shasum -a 256 release/runbeam-${{ matrix.target }}.tar.gz > release/runbeam-${{ matrix.target }}.sha256
 
       - name: Upload artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: runbeam-cli-${{ matrix.target }}
+          name: runbeam-${{ matrix.target }}
           path: release/
 
   # ---------- 3. Publish GitHub Release ----------
@@ -88,12 +83,12 @@ jobs:
       contents: write
 
     steps:
-      - name: Download runbeam-cli build artefacts only
+      - name: Download runbeam build artefacts only
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts
-          pattern: runbeam-cli-*           # only match your real binaries
-          merge-multiple: true         # flattens them into one directory
+          pattern: runbeam-*
+          merge-multiple: true
 
       - name: Generate combined checksums manifest
         shell: bash
