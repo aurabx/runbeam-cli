@@ -98,11 +98,32 @@ jobs:
           echo "Combined checksums:"
           cat checksums.txt
 
+      - name: Delete existing release if present
+        shell: bash
+        run: |
+          if gh release view ${{ github.ref_name }} &>/dev/null; then
+            echo "Release exists, deleting..."
+            gh release delete ${{ github.ref_name }} --yes --cleanup-tag
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: runbeam-cli ${{ github.ref_name }}
           files: ./artifacts/**/*
+          draft: false
+          make_latest: true
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify release
+        shell: bash
+        run: |
+          echo "Verifying release was created successfully..."
+          gh release view ${{ github.ref_name }} --json assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
