@@ -114,8 +114,8 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: runbeam-cli ${{ github.ref_name }}
           files: ./artifacts/**/*
-          draft: false
-          make_latest: true
+          draft: true
+          make_latest: false
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
