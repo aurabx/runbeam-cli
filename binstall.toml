@@ -1,0 +1,8 @@
+pkg_fmt = "tgz"
+bin_dir = "runbeam-{ target }/{ bin }"
+pkg_url = "{ repo }/releases/download/v{ version }/runbeam-{ target }.tar.gz"
+
+[target.x86_64-pc-windows-msvc]
+pkg_fmt = "zip"
+pkg_url = "{ repo }/releases/download/v{ version }/runbeam-{ target }.zip"
+bin_dir = "runbeam-{ target }/{ bin }.exe"

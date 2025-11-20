@@ -5,7 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.0] - 2025-11-19
+## [0.8.0] - 2025-11-20
+
+### Added
+
+- **`harmony:install` Command**
+  - New command to download and install the Harmony binary
+  - Automatically detects platform and architecture
+  - Installs to standard locations (`~/.local/bin` on Unix/macOS, `%APPDATA%\runbeam\bin` on Windows)
+  - Support for installing specific versions with `--version`
+  - Support for custom installation directories with `--dir`
+
+## [0.7.6] - 2025-11-19
 
 ### Changed
 

@@ -52,6 +52,9 @@ pub fn install(version: Option<&str>, output_dir: Option<PathBuf>) -> Result<()>
     // 2. Construct URL
     let filename = format!("harmony-{}.tar.gz", target);
     let url = if let Some(v) = version {
+        if !v.starts_with('v') {
+             return Err(anyhow!("Version must start with 'v' (e.g. v0.7.0)"));
+        }
         format!(
             "https://github.com/aurabx/harmony/releases/download/{}/{}",
             v, filename
