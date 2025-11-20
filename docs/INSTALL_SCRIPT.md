@@ -105,41 +105,6 @@ xattr -d com.apple.quarantine ~/.local/bin/runbeam
 # or wherever the binary was installed
 ```
 
-## Hosting the Script
-
-To make the install script available globally, you need to:
-
-1. **Upload to a web server** that supports raw file serving:
-   - GitHub (via raw.githubusercontent.com)
-   - CDN like jsDelivr or unpkg
-   - Your own web server
-
-2. **For GitHub**:
-   - Commit and push `install.sh` to your repository
-   - The script will be accessible at: `https://raw.githubusercontent.com/aurabx/runbeam-cli/main/install.sh`
-
-3. **For other hosting**, update the download URL in any documentation
-
-## Security Considerations
-
-- The script uses `set -e` to exit on errors
-- All downloads are over HTTPS
-- Checksums are verified (unless unavailable)
-- The script uses `mktemp` for secure temporary directories
-- Binaries are made executable only after extraction
-- Installation uses `sudo` only when necessary
-
-## Script Customization
-
-To use this script for a different project, modify these variables at the top of `install.sh`:
-
-```bash
-REPO="owner/repo-name"           # Your GitHub repo
-BINARY_NAME="myapp"              # Your binary name
-```
-
-The rest of the script will adapt automatically based on your Makefile's packaging conventions (assuming it follows the same naming pattern).
-
 ## Uninstallation
 
 To remove runbeam-cli:

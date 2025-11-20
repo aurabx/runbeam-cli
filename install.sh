@@ -33,8 +33,10 @@ log_error() {
 
 # Detect OS and architecture
 detect_platform() {
-    local os=$(uname -s)
-    local arch=$(uname -m)
+    local os
+    local arch
+    os=$(uname -s)
+    arch=$(uname -m)
     
     case "$os" in
         Darwin)
@@ -86,7 +88,8 @@ detect_platform() {
 get_latest_release() {
     log_info "Fetching latest release information..."
     
-    local response=$(curl -s "${GITHUB_API}/${REPO}/releases/latest")
+    local response
+    response=$(curl -s "${GITHUB_API}/${REPO}/releases/latest")
     
     if echo "$response" | grep -q "Not Found"; then
         log_error "Repository not found or has no releases"
@@ -130,12 +133,15 @@ get_download_url() {
 
 # Download file with fallback
 download_file() {
-    local url=$1
-    local output=$2
+    local url
+    local output
+    url=$1
+    output=$2
     
     log_info "Downloading from: $url"
     
-    if ! curl -fsSL "$url" -o "$output" 2>/dev/null; then
+    # Try curl first (show errors)
+    if ! curl -fsSL "$url" -o "$output"; then
         # Try with wget as fallback
         if command -v wget &> /dev/null; then
             log_info "curl failed, trying wget..."
@@ -145,7 +151,7 @@ download_file() {
                 return 1
             fi
         else
-            log_error "Failed to download from $url (curl and wget not available)"
+            log_error "Failed to download from $url (wget not available as fallback)"
             return 1
         fi
     fi
@@ -155,9 +161,9 @@ download_file() {
 
 # Verify checksum
 verify_checksum() {
-    local file=$1
-    local checksum_file=$2
-    
+    local file
+    file=$1
+
     log_info "Verifying checksum..."
     
     # Download checksum file
@@ -189,8 +195,10 @@ verify_checksum() {
 
 # Extract archive
 extract_archive() {
-    local file=$1
-    local dest=$2
+    local file
+    local dest
+    file=$1
+    dest=$2
     
     log_info "Extracting archive..."
     
@@ -248,7 +256,8 @@ find_install_dir() {
 
 # Install binary
 install_binary() {
-    local binary_path=$1
+    local binary_path
+    binary_path=$1
     
     log_info "Installing to $INSTALL_DIR..."
     
@@ -333,6 +342,7 @@ main() {
     log_info "Installing $BINARY_NAME from $REPO..."
     
     # Create temp directory
+    TMP_DIR=""
     TMP_DIR=$(mktemp -d)
     trap cleanup EXIT
     
