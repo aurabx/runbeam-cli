@@ -130,3 +130,11 @@ jobs:
           gh release view ${{ github.ref_name }} --json assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish release
+        shell: bash
+        run: |
+          echo "Publishing release ${{ github.ref_name }}..."
+          gh release edit ${{ github.ref_name }} --draft=false --latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
