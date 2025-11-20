@@ -75,6 +75,9 @@ runbeam login
 # Verify your authentication token (optional)
 runbeam verify
 
+# Install Harmony (latest version)
+runbeam harmony:install
+
 # Add a Harmony instance
 runbeam harmony:add -i 127.0.0.1 -p 8081 -x admin -l my-label
 

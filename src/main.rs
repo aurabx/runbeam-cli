@@ -102,6 +102,9 @@ fn main() -> Result<()> {
         Some(cli::Command::HarmonyUpdate { id, label }) => {
             harmony::management::update(id.as_deref(), label.as_deref())?;
         }
+        Some(cli::Command::HarmonyInstall { version, output_dir }) => {
+            harmony::install::install(version.as_deref(), output_dir)?;
+        }
         Some(cli::Command::TestBrowser) => {
             println!("Testing browser opening...");
             match open::that_detached("https://www.google.com") {

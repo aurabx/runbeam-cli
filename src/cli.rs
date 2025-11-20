@@ -177,6 +177,18 @@ pub enum Command {
         label: Option<String>,
     },
 
+    /// Download and install the Harmony binary
+    #[command(name = "harmony:install")]
+    HarmonyInstall {
+        /// Version to install (default: latest)
+        #[arg(long = "version")]
+        version: Option<String>,
+
+        /// Output directory (default: current directory)
+        #[arg(long = "dir", short = 'd')]
+        output_dir: Option<std::path::PathBuf>,
+    },
+
     /// Test browser opening (development only)
     #[command(name = "test-browser")]
     TestBrowser,

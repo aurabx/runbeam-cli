@@ -132,6 +132,37 @@ runbeam config:unset api-url
 
 These commands are used to manage Harmony instances via the management API and to integrate them with Runbeam Cloud.
 
+### harmony:install
+
+Download and install the Harmony binary.
+
+This command:
+1. Detects your operating system and architecture
+2. Downloads the appropriate release from GitHub Releases
+3. Extracts the binary to a standard location (or custom directory)
+4. Sets executable permissions (Unix/macOS)
+
+**Default Install Locations:**
+- **macOS**: `~/.local/bin`
+- **Linux**: `~/.local/bin` (or standard XDG executable dir)
+- **Windows**: `%APPDATA%\runbeam\bin`
+
+Options:
+- `--version <VERSION>`: Install a specific version (e.g., "v0.7.0"). Defaults to latest.
+- `-d, --dir <DIR>`: Install to a custom directory.
+
+Examples:
+```sh
+# Install latest version to default location
+runbeam harmony:install
+
+# Install specific version
+runbeam harmony:install --version v0.6.0
+
+# Install to current directory
+runbeam harmony:install --dir .
+```
+
 ### harmony:add
 
 Register a new Harmony instance.
