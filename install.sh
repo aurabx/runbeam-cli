@@ -40,13 +40,12 @@ detect_platform() {
     
     case "$os" in
         Darwin)
-            OS="macos"
             case "$arch" in
                 arm64|aarch64)
-                    ARCH="aarch64"
+                    TARGET="aarch64-apple-darwin"
                     ;;
                 x86_64)
-                    ARCH="x86_64"
+                    TARGET="x86_64-apple-darwin"
                     ;;
                 *)
                     log_error "Unsupported macOS architecture: $arch"
@@ -55,15 +54,12 @@ detect_platform() {
             esac
             ;;
         Linux)
-            OS="linux"
             case "$arch" in
                 x86_64)
-                    ARCH="x86_64"
+                    TARGET="x86_64-unknown-linux-musl"
                     ;;
                 aarch64|arm64)
-                    ARCH="aarch64"
-                    log_warning "aarch64 Linux builds not available. Please build from source."
-                    exit 1
+                    TARGET="aarch64-unknown-linux-musl"
                     ;;
                 *)
                     log_error "Unsupported Linux architecture: $arch"
@@ -72,8 +68,7 @@ detect_platform() {
             esac
             ;;
         MINGW64_NT*|MSYS_NT*)
-            OS="windows"
-            ARCH="x86_64"
+            TARGET="x86_64-pc-windows-msvc"
             ;;
         *)
             log_error "Unsupported OS: $os"
@@ -81,7 +76,7 @@ detect_platform() {
             ;;
     esac
     
-    log_info "Detected platform: $OS ($ARCH)"
+    log_info "Detected platform: $TARGET"
 }
 
 # Get the latest release version
@@ -108,23 +103,18 @@ get_latest_release() {
 
 # Construct download URL
 get_download_url() {
-    case "$OS" in
-        macos)
-            FILENAME="${BINARY_NAME}-macos-${ARCH}-${VERSION}.tar.gz"
-            URL="${GITHUB_API}/${REPO}/releases/download/${VERSION}/${FILENAME}"
-            CHECKSUM_FILE="${FILENAME}.sha256"
+    # Determine file extension based on target
+    case "$TARGET" in
+        *-windows-*)
+            EXTENSION="zip"
             ;;
-        linux)
-            FILENAME="${BINARY_NAME}-linux-${ARCH}-${VERSION}.tar.gz"
-            URL="${GITHUB_API}/${REPO}/releases/download/${VERSION}/${FILENAME}"
-            CHECKSUM_FILE="${FILENAME}.sha256"
-            ;;
-        windows)
-            FILENAME="${BINARY_NAME}-windows-${ARCH}-${VERSION}.zip"
-            URL="${GITHUB_API}/${REPO}/releases/download/${VERSION}/${FILENAME}"
-            CHECKSUM_FILE="${FILENAME}.sha256"
+        *)
+            EXTENSION="tar.gz"
             ;;
     esac
+    
+    FILENAME="${BINARY_NAME}-${TARGET}.${EXTENSION}"
+    CHECKSUM_FILE="${BINARY_NAME}-${TARGET}.sha256"
     
     # Use releases URL directly instead of API for actual downloads
     URL="https://github.com/${REPO}/releases/download/${VERSION}/${FILENAME}"
@@ -172,6 +162,10 @@ verify_checksum() {
         return 0
     fi
     
+    # Strip directory prefixes from checksum file (for compatibility with old releases)
+    sed -i.bak 's|.*/||' "$TMP_DIR/$CHECKSUM_FILE" 2>/dev/null || \
+        sed -i '' 's|.*/||' "$TMP_DIR/$CHECKSUM_FILE" 2>/dev/null
+    
     # Verify
     if command -v sha256sum &> /dev/null; then
         cd "$TMP_DIR"
@@ -202,8 +196,8 @@ extract_archive() {
     
     log_info "Extracting archive..."
     
-    case "$OS" in
-        windows)
+    case "$TARGET" in
+        *-windows-*)
             if command -v unzip &> /dev/null; then
                 unzip -q "$file" -d "$dest"
             else
