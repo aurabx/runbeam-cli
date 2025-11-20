@@ -65,7 +65,8 @@ jobs:
         run: |
           mkdir -p release
           tar czf release/runbeam-${{ matrix.target }}.tar.gz -C target/${{ matrix.target }}/release runbeam
-          shasum -a 256 release/runbeam-${{ matrix.target }}.tar.gz > release/runbeam-${{ matrix.target }}.sha256
+          cd release
+          shasum -a 256 runbeam-${{ matrix.target }}.tar.gz > runbeam-${{ matrix.target }}.sha256
 
       - name: Upload artefacts
         uses: actions/upload-artifact@v4
