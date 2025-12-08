@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use runbeam_sdk::JwtValidationOptions;
 use directories::BaseDirs;
 use runbeam_sdk::UserInfo;
 use serde::{Deserialize, Serialize};
@@ -307,7 +308,7 @@ pub fn load_and_verify_auth() -> Result<Option<CliAuth>> {
         // Attempt to verify the token using SDK (async call via runtime)
         let validation_result = tokio::runtime::Runtime::new()
             .expect("Failed to create Tokio runtime")
-            .block_on(runbeam_sdk::validate_jwt_token(&auth.token, 24));
+            .block_on(runbeam_sdk::validate_jwt_token(&auth.token, &JwtValidationOptions::default()));
 
         match validation_result {
             Ok(claims) => {

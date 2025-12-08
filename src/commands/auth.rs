@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use runbeam_sdk::{RunbeamClient, UserInfo, validate_jwt_token as sdk_validate_jwt};
+use runbeam_sdk::{RunbeamClient, UserInfo, validate_jwt_token as sdk_validate_jwt, JwtValidationOptions};
 use serde::{Deserialize, Serialize};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -49,7 +49,7 @@ pub fn login() -> Result<()> {
         // Verify the token is still valid
         let validation_result = tokio::runtime::Runtime::new()
             .expect("Failed to create Tokio runtime")
-            .block_on(sdk_validate_jwt(&existing_auth.token, 24));
+            .block_on(sdk_validate_jwt(&existing_auth.token, &JwtValidationOptions::default()));
 
         if validation_result.is_ok() {
             println!("✓ Already logged in with a valid token.");
@@ -207,7 +207,7 @@ pub fn login() -> Result<()> {
                 // Verify the token using SDK (RS256 with JWKS)
                 let validation_result = tokio::runtime::Runtime::new()
                     .expect("Failed to create Tokio runtime")
-                    .block_on(sdk_validate_jwt(&token_clone, 24));
+                    .block_on(sdk_validate_jwt(&token_clone, &JwtValidationOptions::default()));
 
                 match validation_result {
                     Ok(jwt_claims) => {
@@ -291,7 +291,7 @@ pub fn authorize_harmony(
     debug!("Validating JWT token before authorization...");
     let validation_result = tokio::runtime::Runtime::new()
         .expect("Failed to create Tokio runtime")
-        .block_on(sdk_validate_jwt(&auth.token, 24));
+        .block_on(sdk_validate_jwt(&auth.token, &JwtValidationOptions::default()));
 
     match validation_result {
         Ok(claims) => {
@@ -583,7 +583,7 @@ pub fn verify_token() -> Result<()> {
     // Validate the token using SDK (async)
     let validation_result = tokio::runtime::Runtime::new()
         .expect("Failed to create Tokio runtime")
-        .block_on(sdk_validate_jwt(&auth.token, 24));
+        .block_on(sdk_validate_jwt(&auth.token, &JwtValidationOptions::default()));
 
     match validation_result {
         Ok(claims) => {
