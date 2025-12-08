@@ -7,13 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
 ### Changed
 
-### Fixed
+- **SDK Update: runbeam-sdk 0.8.0 → 0.9.1**
+  - Updated to runbeam-sdk 0.9.1 which includes harmony-dsl 1.9.0
+  - ⚠️ **Breaking Change**: JWT validation API updated
+    - `validate_jwt_token()` now requires `&JwtValidationOptions` parameter instead of integer leeway timeout
+    - Use `JwtValidationOptions::default()` for standard validation behavior
+    - See runbeam-sdk 0.9.0 release notes for migration details
 
-### Removed
+### Harmony DSL 1.9.0 Alignment
+- Updated all JWT token validation calls to use new `JwtValidationOptions` API
+- Full compatibility with runbeam-sdk 0.9.1 (includes harmony-dsl 1.9.0)
 
 ## [0.8.0] - 2025-11-20
 
