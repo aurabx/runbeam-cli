@@ -215,4 +215,21 @@ pub enum Command {
         /// Configuration key to unset
         key: String,
     },
+
+    /// Get a machine token for a gateway (for CI/CD and environment variable injection)
+    ///
+    /// This command retrieves a machine token without requiring a registered Harmony instance.
+    /// Use this for out-of-band token generation in CI/CD pipelines or containerized deployments.
+    ///
+    /// The token is output to stdout for easy capture:
+    ///   export RUNBEAM_MACHINE_TOKEN=$(runbeam token:get --gateway-code my-gateway)
+    #[command(name = "token:get")]
+    TokenGet {
+        /// Gateway code (will be created if it doesn't exist)
+        #[arg(short = 'g', long = "gateway-code")]
+        gateway_code: String,
+        /// Output only the token (no other output), suitable for scripting
+        #[arg(long = "raw")]
+        raw: bool,
+    },
 }

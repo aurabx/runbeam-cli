@@ -121,6 +121,9 @@ fn main() -> Result<()> {
         Some(cli::Command::ConfigUnset { key }) => {
             config::unset_config(&key)?;
         }
+        Some(cli::Command::TokenGet { gateway_code, raw }) => {
+            auth::get_token(&gateway_code, raw)?;
+        }
         None => {
             // No subcommand: show help-like hint
             warn!("no command provided");

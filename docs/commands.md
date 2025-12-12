@@ -76,6 +76,38 @@ Usage:
 runbeam verify
 ```
 
+## Token Commands
+
+### token:get
+
+Get a machine token for a gateway code. This command is designed for CI/CD pipelines and containerized deployments where you need to obtain a machine token without a running Harmony instance.
+
+Unlike `harmony:authorize`, this command:
+- Does not require a registered Harmony instance
+- Does not send the token to a Harmony proxy
+- Simply outputs the token for capture and injection as an environment variable
+
+Options:
+- `-g, --gateway-code <CODE>`: Gateway code (will be created if it doesn't exist)
+- `--raw`: Output only the token with no other text (for scripting)
+
+Examples:
+```sh
+# Get a machine token with full output
+runbeam token:get -g my-gateway-code
+
+# Get just the token for scripting
+runbeam token:get -g my-gateway-code --raw
+
+# Capture the token as an environment variable
+export RUNBEAM_MACHINE_TOKEN=$(runbeam token:get -g my-gateway-code --raw)
+```
+
+Use cases:
+- **CI/CD pipelines**: Generate tokens during deployment and inject as secrets
+- **Container orchestration**: Populate environment variables at container startup
+- **Infrastructure as Code**: Script token generation for automated deployments
+
 ## Configuration Commands
 
 The CLI stores configuration in `~/.runbeam/config.json`. Configuration values have the following precedence (highest to lowest):

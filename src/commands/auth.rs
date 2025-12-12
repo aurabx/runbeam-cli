@@ -661,6 +661,67 @@ pub fn verify_token() -> Result<()> {
     }
 }
 
+/// Get a machine token for a gateway code (for CI/CD and environment variable injection)
+///
+/// This function retrieves a machine token without requiring a registered Harmony instance.
+/// It's designed for out-of-band token generation in CI/CD pipelines or containerized deployments.
+///
+/// # Arguments
+///
+/// * `gateway_code` - The gateway code (will be created if it doesn't exist)
+/// * `raw` - If true, output only the token with no other text
+pub fn get_token(gateway_code: &str, raw: bool) -> Result<()> {
+    info!("Getting machine token for gateway: {}", gateway_code);
+
+    // Load user authentication token
+    let auth = storage::load_auth()?.context("Not logged in. Please run `runbeam login` first.")?;
+
+    // Get API base URL from config
+    let api_url = api_base_url()?;
+    debug!("Using API URL: {}", api_url);
+
+    // Create SDK client and authorize gateway
+    let client = RunbeamClient::new(api_url);
+
+    // Create Tokio runtime for async operations
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+
+    let auth_response = runtime
+        .block_on(client.authorize_gateway(
+            &auth.token,
+            gateway_code,
+            None, // machine_public_key
+            None, // metadata
+        ))
+        .context("Failed to get token from Runbeam Cloud")?;
+
+    if raw {
+        // Output only the token for scripting
+        println!("{}", auth_response.machine_token);
+    } else {
+        // Output with context
+        println!("✅ Machine token retrieved successfully!");
+        println!();
+        println!("Gateway: {} ({})", auth_response.gateway.name, auth_response.gateway.code);
+        println!("Gateway ID: {}", auth_response.gateway.id);
+        println!("Expires at: {}", auth_response.expires_at);
+        let expires_in_days = (auth_response.expires_in / 86400.0).round() as i64;
+        println!("Expires in: {} days", expires_in_days);
+        if !auth_response.abilities.is_empty() {
+            println!("Abilities: {}", auth_response.abilities.join(", "));
+        }
+        println!();
+        println!("Machine Token:");
+        println!("{}", auth_response.machine_token);
+        println!();
+        println!("Usage:");
+        println!("  export RUNBEAM_MACHINE_TOKEN=$(runbeam token:get -g {} --raw)", gateway_code);
+    }
+
+    info!("Token retrieved for gateway: {}", auth_response.gateway.id);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
