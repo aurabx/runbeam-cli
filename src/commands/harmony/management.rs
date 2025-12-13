@@ -263,10 +263,7 @@ pub fn reload(id: Option<&str>, label: Option<&str>) -> Result<()> {
 
 pub fn update(id: Option<&str>, label: Option<&str>) -> Result<()> {
     let inst = resolve_instance(id, label)?;
-    let url = format!(
-        "{}/update",
-        base_url(&inst)
-    );
+    let url = format!("{}/update", base_url(&inst));
     let client = Client::new();
     let resp = client
         .post(&url)
@@ -277,13 +274,18 @@ pub fn update(id: Option<&str>, label: Option<&str>) -> Result<()> {
     let json: Value = resp.json().context("parsing JSON response")?;
 
     if status.is_success() {
-        let config_size = json.get("config_size")
+        let config_size = json
+            .get("config_size")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
-        println!("✓ Configuration uploaded successfully ({} bytes)", config_size);
+        println!(
+            "✓ Configuration uploaded successfully ({} bytes)",
+            config_size
+        );
         Ok(())
     } else {
-        let message = json.get("message")
+        let message = json
+            .get("message")
             .and_then(|v| v.as_str())
             .unwrap_or("Unknown error");
         Err(anyhow!("Failed to update configuration: {}", message))

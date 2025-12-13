@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use runbeam_sdk::JwtValidationOptions;
 use directories::BaseDirs;
+use runbeam_sdk::JwtValidationOptions;
 use runbeam_sdk::UserInfo;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -308,7 +308,10 @@ pub fn load_and_verify_auth() -> Result<Option<CliAuth>> {
         // Attempt to verify the token using SDK (async call via runtime)
         let validation_result = tokio::runtime::Runtime::new()
             .expect("Failed to create Tokio runtime")
-            .block_on(runbeam_sdk::validate_jwt_token(&auth.token, &JwtValidationOptions::default()));
+            .block_on(runbeam_sdk::validate_jwt_token(
+                &auth.token,
+                &JwtValidationOptions::default(),
+            ));
 
         match validation_result {
             Ok(claims) => {
@@ -432,7 +435,10 @@ mod tests {
 
         let deserialized: HarmonyInstance =
             serde_json::from_str(&json).expect("Failed to deserialize");
-        assert_eq!(deserialized.gateway_id, Some("01JBXXXXXXXXXXXXXXXXXXXXXXXXXX".to_string()));
+        assert_eq!(
+            deserialized.gateway_id,
+            Some("01JBXXXXXXXXXXXXXXXXXXXXXXXXXX".to_string())
+        );
         assert_eq!(instance, deserialized);
     }
 
@@ -469,7 +475,10 @@ mod tests {
         let deserialized: HarmonyInstance =
             serde_json::from_str(&json).expect("Failed to deserialize");
 
-        assert_eq!(deserialized.gateway_id, Some("01JBXX1234567890ABCDEFGHIJK".to_string()));
+        assert_eq!(
+            deserialized.gateway_id,
+            Some("01JBXX1234567890ABCDEFGHIJK".to_string())
+        );
 
         // Test with gateway_id absent (None)
         let instance_without_gw = HarmonyInstance {

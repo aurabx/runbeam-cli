@@ -7,7 +7,7 @@ use std::process::Command;
 mod cli;
 
 #[path = "../src/storage.rs"]
-#[allow(dead_code)]  // Storage functions are used in main binary, not in these tests
+#[allow(dead_code)] // Storage functions are used in main binary, not in these tests
 mod storage;
 
 #[test]
@@ -15,7 +15,7 @@ fn test_harmony_update_command_exists() {
     // Test that the command is registered
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.arg("--help");
-    
+
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("harmony:update"));
@@ -26,10 +26,12 @@ fn test_harmony_update_help() {
     // Test the help text for harmony:update
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["harmony:update", "--help"]);
-    
+
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Trigger Harmony to upload its configuration to Runbeam Cloud"))
+        .stdout(predicate::str::contains(
+            "Trigger Harmony to upload its configuration to Runbeam Cloud",
+        ))
         .stdout(predicate::str::contains("--id"))
         .stdout(predicate::str::contains("--label"));
 }
@@ -39,11 +41,11 @@ fn test_harmony_update_requires_id_or_label() {
     // Test that command fails without --id or --label
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.arg("harmony:update");
-    
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("must supply --id or --label")
-            .or(predicate::str::contains("No Harmony instances registered")));
+
+    cmd.assert().failure().stderr(
+        predicate::str::contains("must supply --id or --label")
+            .or(predicate::str::contains("No Harmony instances registered")),
+    );
 }
 
 #[test]
@@ -51,11 +53,11 @@ fn test_harmony_update_conflicts_id_and_label() {
     // Test that --id and --label are mutually exclusive
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["harmony:update", "--id", "abc123", "--label", "test"]);
-    
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("cannot be used with")
-            .or(predicate::str::contains("conflicts with")));
+
+    cmd.assert().failure().stderr(
+        predicate::str::contains("cannot be used with")
+            .or(predicate::str::contains("conflicts with")),
+    );
 }
 
 #[test]
@@ -63,12 +65,12 @@ fn test_harmony_update_nonexistent_instance() {
     // Test error when instance doesn't exist
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["harmony:update", "--id", "nonexistent"]);
-    
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("no instance")
+
+    cmd.assert().failure().stderr(
+        predicate::str::contains("no instance")
             .or(predicate::str::contains("not found"))
-            .or(predicate::str::contains("No Harmony instances registered")));
+            .or(predicate::str::contains("No Harmony instances registered")),
+    );
 }
 
 #[test]
@@ -76,7 +78,7 @@ fn test_harmony_update_with_verbose() {
     // Test that verbose flag works
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["-v", "harmony:update", "--help"]);
-    
+
     cmd.assert().success();
 }
 
@@ -85,7 +87,7 @@ fn test_harmony_update_with_quiet() {
     // Test that quiet flag works
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("runbeam"));
     cmd.args(&["-q", "harmony:update", "--help"]);
-    
+
     cmd.assert().success();
 }
 
@@ -97,7 +99,7 @@ fn test_harmony_update_cli_parsing() {
     // Test parsing with --id
     let args = vec!["runbeam", "harmony:update", "--id", "test123"];
     let cli = cli::Cli::parse_from(args);
-    
+
     match cli.command {
         Some(cli::Command::HarmonyUpdate { id, label }) => {
             assert_eq!(id, Some("test123".to_string()));
@@ -109,7 +111,7 @@ fn test_harmony_update_cli_parsing() {
     // Test parsing with --label
     let args = vec!["runbeam", "harmony:update", "--label", "my-harmony"];
     let cli = cli::Cli::parse_from(args);
-    
+
     match cli.command {
         Some(cli::Command::HarmonyUpdate { id, label }) => {
             assert_eq!(id, None);
@@ -121,7 +123,7 @@ fn test_harmony_update_cli_parsing() {
     // Test parsing with -l shorthand
     let args = vec!["runbeam", "harmony:update", "-l", "test"];
     let cli = cli::Cli::parse_from(args);
-    
+
     match cli.command {
         Some(cli::Command::HarmonyUpdate { id, label }) => {
             assert_eq!(id, None);
@@ -134,7 +136,6 @@ fn test_harmony_update_cli_parsing() {
 /// Test URL construction in management module
 #[test]
 fn test_update_url_construction() {
-
     let instance = storage::HarmonyInstance {
         id: "test123".to_string(),
         ip: "127.0.0.1".to_string(),

@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
-use runbeam_sdk::{RunbeamClient, UserInfo, validate_jwt_token as sdk_validate_jwt, JwtValidationOptions};
+use runbeam_sdk::{
+    JwtValidationOptions, RunbeamClient, UserInfo, validate_jwt_token as sdk_validate_jwt,
+};
 use serde::{Deserialize, Serialize};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -49,7 +51,10 @@ pub fn login() -> Result<()> {
         // Verify the token is still valid
         let validation_result = tokio::runtime::Runtime::new()
             .expect("Failed to create Tokio runtime")
-            .block_on(sdk_validate_jwt(&existing_auth.token, &JwtValidationOptions::default()));
+            .block_on(sdk_validate_jwt(
+                &existing_auth.token,
+                &JwtValidationOptions::default(),
+            ));
 
         if validation_result.is_ok() {
             println!("✓ Already logged in with a valid token.");
@@ -207,7 +212,10 @@ pub fn login() -> Result<()> {
                 // Verify the token using SDK (RS256 with JWKS)
                 let validation_result = tokio::runtime::Runtime::new()
                     .expect("Failed to create Tokio runtime")
-                    .block_on(sdk_validate_jwt(&token_clone, &JwtValidationOptions::default()));
+                    .block_on(sdk_validate_jwt(
+                        &token_clone,
+                        &JwtValidationOptions::default(),
+                    ));
 
                 match validation_result {
                     Ok(jwt_claims) => {
@@ -291,7 +299,10 @@ pub fn authorize_harmony(
     debug!("Validating JWT token before authorization...");
     let validation_result = tokio::runtime::Runtime::new()
         .expect("Failed to create Tokio runtime")
-        .block_on(sdk_validate_jwt(&auth.token, &JwtValidationOptions::default()));
+        .block_on(sdk_validate_jwt(
+            &auth.token,
+            &JwtValidationOptions::default(),
+        ));
 
     match validation_result {
         Ok(claims) => {
@@ -303,7 +314,10 @@ pub fn authorize_harmony(
                 .as_secs() as i64;
             let time_remaining = claims.exp - now;
             if time_remaining < 3600 {
-                println!("⚠️  Warning: Your token expires in {} minutes.", time_remaining / 60);
+                println!(
+                    "⚠️  Warning: Your token expires in {} minutes.",
+                    time_remaining / 60
+                );
                 println!("   Consider running `runbeam login` to refresh your token.");
                 println!();
             }
@@ -399,7 +413,10 @@ pub fn authorize_harmony(
     if let Some(stored_instance) = instances.iter_mut().find(|i| i.id == instance_id) {
         stored_instance.gateway_id = Some(auth_response.gateway.id.clone());
         storage::save_harmony_instances(&instances)?;
-        debug!("Stored gateway_id {} for instance {}", auth_response.gateway.id, instance_id);
+        debug!(
+            "Stored gateway_id {} for instance {}",
+            auth_response.gateway.id, instance_id
+        );
     }
 
     // Send machine token to Harmony proxy instance
@@ -461,7 +478,9 @@ pub fn authorize_harmony(
                 } else {
                     // Interactive prompt
                     println!("📡 Upload local configuration to Runbeam Cloud?");
-                    println!("   This will overwrite any configuration changes made on Runbeam Cloud.");
+                    println!(
+                        "   This will overwrite any configuration changes made on Runbeam Cloud."
+                    );
                     print!("   Upload configuration? [y/N]: ");
                     std::io::Write::flush(&mut std::io::stdout()).ok();
 
@@ -481,7 +500,9 @@ pub fn authorize_harmony(
                         Err(e) => {
                             warn!("Configuration upload failed: {}", e);
                             println!("⚠️  Configuration upload failed: {}", e);
-                            println!("   Authorization is still valid. You can manually upload config with:");
+                            println!(
+                                "   Authorization is still valid. You can manually upload config with:"
+                            );
                             println!("   runbeam harmony:update --id {}", instance_id);
                         }
                     }
@@ -583,7 +604,10 @@ pub fn verify_token() -> Result<()> {
     // Validate the token using SDK (async)
     let validation_result = tokio::runtime::Runtime::new()
         .expect("Failed to create Tokio runtime")
-        .block_on(sdk_validate_jwt(&auth.token, &JwtValidationOptions::default()));
+        .block_on(sdk_validate_jwt(
+            &auth.token,
+            &JwtValidationOptions::default(),
+        ));
 
     match validation_result {
         Ok(claims) => {
@@ -702,7 +726,10 @@ pub fn get_token(gateway_code: &str, raw: bool) -> Result<()> {
         // Output with context
         println!("✅ Machine token retrieved successfully!");
         println!();
-        println!("Gateway: {} ({})", auth_response.gateway.name, auth_response.gateway.code);
+        println!(
+            "Gateway: {} ({})",
+            auth_response.gateway.name, auth_response.gateway.code
+        );
         println!("Gateway ID: {}", auth_response.gateway.id);
         println!("Expires at: {}", auth_response.expires_at);
         let expires_in_days = (auth_response.expires_in / 86400.0).round() as i64;
@@ -715,7 +742,10 @@ pub fn get_token(gateway_code: &str, raw: bool) -> Result<()> {
         println!("{}", auth_response.machine_token);
         println!();
         println!("Usage:");
-        println!("  export RUNBEAM_MACHINE_TOKEN=$(runbeam token:get -g {} --raw)", gateway_code);
+        println!(
+            "  export RUNBEAM_MACHINE_TOKEN=$(runbeam token:get -g {} --raw)",
+            gateway_code
+        );
     }
 
     info!("Token retrieved for gateway: {}", auth_response.gateway.id);

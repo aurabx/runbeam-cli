@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.9.0] - 2025-12-12
+
+### Added
+
+- **`token:get` command**
+  - Retrieve a machine token without running the authorization flow
+
 ### Changed
 
 - **SDK Update: runbeam-sdk 0.8.0 → 0.9.1**
@@ -16,9 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Use `JwtValidationOptions::default()` for standard validation behavior
     - See runbeam-sdk 0.9.0 release notes for migration details
 
-### Harmony DSL 1.9.0 Alignment
-- Updated all JWT token validation calls to use new `JwtValidationOptions` API
-- Full compatibility with runbeam-sdk 0.9.1 (includes harmony-dsl 1.9.0)
+- **Harmony DSL 1.9.0 alignment**
+  - Updated all JWT token validation calls to use new `JwtValidationOptions` API
+  - Full compatibility with runbeam-sdk 0.9.1 (includes harmony-dsl 1.9.0)
 
 ## [0.8.0] - 2025-11-20
 
@@ -248,7 +261,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Harmony commands (`harmony:add`, `harmony:list`, `harmony:remove`)
 - Harmony management API integration
 
-[0.4.0]: https://github.com/aurabx/runbeam-cli/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/aurabx/runbeam-cli/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/aurabx/runbeam-cli/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/aurabx/runbeam-cli/releases/tag/v0.1.0
+[0.9.0]: https://github.com/aurabx/runbeam-cli/compare/0.8.0...0.9.0
+[0.8.0]: https://github.com/aurabx/runbeam-cli/compare/0.7.8...0.8.0
+[0.4.0]: https://github.com/aurabx/runbeam-cli/compare/0.3.0...0.4.0
+[0.3.0]: https://github.com/aurabx/runbeam-cli/compare/0.2.0...0.3.0
+[0.2.0]: https://github.com/aurabx/runbeam-cli/compare/0.1.0...0.2.0
+[0.1.0]: https://github.com/aurabx/runbeam-cli/releases/tag/0.1.0

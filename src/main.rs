@@ -87,7 +87,12 @@ fn main() -> Result<()> {
         Some(cli::Command::HarmonyReload { id, label }) => {
             harmony::management::reload(id.as_deref(), label.as_deref())?;
         }
-        Some(cli::Command::HarmonyAuthorize { id, label, update, yes }) => {
+        Some(cli::Command::HarmonyAuthorize {
+            id,
+            label,
+            update,
+            yes,
+        }) => {
             auth::authorize_harmony(id.as_deref(), label.as_deref(), update, yes)?;
         }
         Some(cli::Command::HarmonySetKey { id, encryption_key }) => {
@@ -102,7 +107,10 @@ fn main() -> Result<()> {
         Some(cli::Command::HarmonyUpdate { id, label }) => {
             harmony::management::update(id.as_deref(), label.as_deref())?;
         }
-        Some(cli::Command::HarmonyInstall { version, output_dir }) => {
+        Some(cli::Command::HarmonyInstall {
+            version,
+            output_dir,
+        }) => {
             harmony::install::install(version.as_deref(), output_dir)?;
         }
         Some(cli::Command::TestBrowser) => {

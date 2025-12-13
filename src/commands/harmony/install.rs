@@ -1,13 +1,13 @@
 use anyhow::{Context, Result, anyhow};
-use reqwest::blocking::Client;
 use directories::BaseDirs;
+use flate2::read::GzDecoder;
+use reqwest::blocking::Client;
 use std::env::consts::{ARCH, OS};
 use std::fs::{self};
-use std::io::{Cursor};
+use std::io::Cursor;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{PathBuf};
-use flate2::read::GzDecoder;
+use std::path::PathBuf;
 use tar::Archive;
 use tracing::info;
 
@@ -16,7 +16,7 @@ fn get_default_install_dir() -> Result<PathBuf> {
         if let Some(exe_dir) = base_dirs.executable_dir() {
             return Ok(exe_dir.to_path_buf());
         }
-        
+
         // Fallback for platforms where executable_dir() is None (e.g. macOS, Windows)
         #[cfg(target_os = "macos")]
         {
@@ -34,8 +34,10 @@ fn get_default_install_dir() -> Result<PathBuf> {
             return Ok(base_dirs.home_dir().join(".local").join("bin"));
         }
     }
-    
-    Err(anyhow!("Could not determine default installation directory"))
+
+    Err(anyhow!(
+        "Could not determine default installation directory"
+    ))
 }
 
 pub fn install(version: Option<&str>, output_dir: Option<PathBuf>) -> Result<()> {
@@ -53,7 +55,7 @@ pub fn install(version: Option<&str>, output_dir: Option<PathBuf>) -> Result<()>
     let filename = format!("harmony-{}.tar.gz", target);
     let url = if let Some(v) = version {
         if !v.starts_with('v') {
-             return Err(anyhow!("Version must start with 'v' (e.g. v0.7.0)"));
+            return Err(anyhow!("Version must start with 'v' (e.g. v0.7.0)"));
         }
         format!(
             "https://github.com/aurabx/harmony/releases/download/{}/{}",
@@ -91,12 +93,12 @@ pub fn install(version: Option<&str>, output_dir: Option<PathBuf>) -> Result<()>
         Some(d) => d,
         None => get_default_install_dir()?,
     };
-    
+
     if !output_path.exists() {
         println!("Creating directory: {}", output_path.display());
         fs::create_dir_all(&output_path).context("Failed to create output directory")?;
     }
-    
+
     println!("Extracting to {}", output_path.display());
 
     let decoder = GzDecoder::new(Cursor::new(&content));
@@ -109,7 +111,9 @@ pub fn install(version: Option<&str>, output_dir: Option<PathBuf>) -> Result<()>
     // So it likely contains the `harmony` binary at the root of the archive.
 
     // Let's extract to the target directory.
-    archive.unpack(&output_path).context("Failed to unpack archive")?;
+    archive
+        .unpack(&output_path)
+        .context("Failed to unpack archive")?;
 
     // 6. Make executable (Unix only)
     #[cfg(unix)]
@@ -117,17 +121,26 @@ pub fn install(version: Option<&str>, output_dir: Option<PathBuf>) -> Result<()>
         let binary_name = "harmony";
         let binary_path = output_path.join(binary_name);
         if binary_path.exists() {
-            println!("Setting executable permissions for {}", binary_path.display());
+            println!(
+                "Setting executable permissions for {}",
+                binary_path.display()
+            );
             let mut perms = fs::metadata(&binary_path)?.permissions();
             perms.set_mode(0o755);
             fs::set_permissions(&binary_path, perms)?;
         } else {
             // It might be in a subdirectory if the tarball structure changed, but assuming README is correct.
             // If not found, we just warn.
-             println!("Warning: '{}' not found in extraction output. You may need to find the binary manually.", binary_name);
+            println!(
+                "Warning: '{}' not found in extraction output. You may need to find the binary manually.",
+                binary_name
+            );
         }
     }
 
-    println!("✓ Harmony installed successfully to {}", output_path.display());
+    println!(
+        "✓ Harmony installed successfully to {}",
+        output_path.display()
+    );
     Ok(())
 }

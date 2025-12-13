@@ -28,7 +28,7 @@ pub fn harmony_add(
         port,
         label: final_label.clone(),
         path_prefix: path_prefix.to_string(),
-        gateway_id: None,  // Will be set after authorization
+        gateway_id: None, // Will be set after authorization
     };
     crate::storage::add_harmony_instance(instance.clone())?;
 

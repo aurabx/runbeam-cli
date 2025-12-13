@@ -4,7 +4,7 @@ name: Release CLI
 on:
   push:
     tags:
-      - '**'      # match all tags, e.g. 1.0.0, release-1, beta, etc.
+      - '*.*.*'   # semver-ish tags like 0.9.0 (repo uses non-v tags)
   workflow_dispatch:
 
 env:
