@@ -1,0 +1,43 @@
+[project]
+name = "runbeam-cli"
+description = "CLI for managing Runbeam and Harmony instances"
+language = "rust"
+version = "0.9.0"
+repository = "https://github.com/aurabx/runbeam-cli"
+
+[commands]
+build = "cargo build --release"
+test = "cargo test"
+lint = "cargo clippy && cargo fmt --check"
+run = "cargo run -- list"
+install = "cargo install --path ."
+
+[entry_points]
+main = "src/main.rs"
+cli = "src/cli.rs"
+commands = "src/commands/"
+storage = "src/storage.rs"
+
+[dependencies]
+internal = ["runbeam-sdk"]
+external = ["clap", "tokio", "serde", "reqwest", "directories"]
+
+[related_projects]
+upstream = ["runbeam-sdk"]
+downstream = []
+
+[concepts.commands]
+files = ["src/cli.rs", "src/commands/"]
+summary = "Clap-based command structure: login, logout, verify, harmony:add/remove/list/authorize"
+
+[concepts.authentication]
+files = ["src/commands/login.rs", "src/commands/logout.rs", "src/commands/verify.rs"]
+summary = "Browser-based OAuth flow with encrypted token storage"
+
+[concepts.harmony_management]
+files = ["src/commands/harmony.rs", "src/storage.rs"]
+summary = "Manage local Harmony instances: add, remove, list, info, authorize with Runbeam Cloud"
+
+[concepts.storage]
+files = ["src/storage.rs", "src/storage_tests.rs"]
+summary = "Encrypted filesystem storage for auth tokens and Harmony instance registry at ~/.runbeam/"
